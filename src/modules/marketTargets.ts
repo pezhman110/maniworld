@@ -1,5 +1,6 @@
-import { MarketPacingReport, MarketTargetRule, MarketType, TargetMetric, WorkingHours } from '../types/domain';
+import { MarketPacingReport, MarketTargetRule, MarketType, PacingStatus, TargetMetric, WorkingHours } from '../types/domain';
 import { DEFAULT_WORKING_HOURS } from './locations';
+import { weightedExpectedFraction } from './hourlyWeights';
 
 /**
  * Market targets module.
@@ -9,13 +10,13 @@ import { DEFAULT_WORKING_HOURS } from './locations';
  *  - home-service:     90-110 confirmed bookings/day
  *  - business-buying:  50-70 online sessions/day, 30-40 in-person meetings/day (at the office address)
  *  - business-selling: 30 confirmed online contacts/day
- *  - investment:       70 in-person meetings/day, 70+ online sessions/day
+ *  - investment:       70 in-person meetings/day, 70+ online sessions/day (no ceiling)
  *
  * It also turns "how am I doing right now?" into a concrete, hourly-updatable
- * pacing report: given the market's working-hours window and how many hours
- * have elapsed today, it tells you whether you're on pace to hit the minimum
- * target and how much is still needed per remaining hour — the "weakness"
- * signal the brief asked for.
+ * pacing report: given the market's working-hours window, an hourly demand
+ * curve (see `hourlyWeights.ts`) and how many hours have elapsed today, it
+ * tells you whether you're on pace for both the floor (min) and stretch
+ * (max) targets, and how much is still needed per remaining hour.
  */
 
 export const DEFAULT_MARKET_TARGETS: MarketTargetRule[] = [
@@ -25,7 +26,10 @@ export const DEFAULT_MARKET_TARGETS: MarketTargetRule[] = [
   { market: 'business-buying', metric: 'in-person-meeting', minPerDay: 30, maxPerDay: 40 },
   { market: 'business-selling', metric: 'online-contact', minPerDay: 30, maxPerDay: 30 },
   { market: 'investment', metric: 'in-person-meeting', minPerDay: 70, maxPerDay: 70 },
-  { market: 'investment', metric: 'online-session', minPerDay: 70, maxPerDay: Number.POSITIVE_INFINITY },
+  // "70+/day": no stretch ceiling. `maxPerDay` is intentionally omitted rather
+  // than set to Infinity — see MarketPacingReport.status for how "no cap" is
+  // surfaced explicitly instead of via Infinity arithmetic.
+  { market: 'investment', metric: 'online-session', minPerDay: 70 },
 ];
 
 export function findTargetRule(
@@ -47,12 +51,25 @@ function elapsedWorkingHours(hours: WorkingHours, currentHour: number): number {
   return currentHour - hours.startHour;
 }
 
+function resolveStatus(params: {
+  achievedSoFar: number;
+  minPerDay: number;
+  maxPerDay?: number;
+  hoursRemaining: number;
+  isBelowTarget: boolean;
+}): PacingStatus {
+  const { achievedSoFar, minPerDay, maxPerDay, hoursRemaining, isBelowTarget } = params;
+  if (maxPerDay !== undefined && achievedSoFar > maxPerDay) return 'above-max';
+  if (hoursRemaining <= 0 && achievedSoFar < minPerDay) return 'missed';
+  if (isBelowTarget) return 'below-target';
+  return 'on-track';
+}
+
 /**
  * Computes a real-time/hourly pacing report for one market + metric.
  *
  * @param achievedSoFar confirmed count for the metric so far today
  * @param currentHour   current local hour (0-23, fractional allowed for e.g. 14.5)
- * @param workingHours  overrides the market's default window if supplied
  */
 export function computeMarketPacing(params: {
   market: MarketType;
@@ -74,9 +91,19 @@ export function computeMarketPacing(params: {
   const hoursElapsed = elapsedWorkingHours(workingHours, currentHour);
   const hoursRemaining = Math.max(0, totalHours - hoursElapsed);
 
-  const expectedByNowMin = totalHours === 0 ? rule.minPerDay : (rule.minPerDay * hoursElapsed) / totalHours;
+  const expectedFraction = weightedExpectedFraction({ market, currentHour, workingHours });
+
+  const expectedByNowMin = rule.minPerDay * expectedFraction;
+  const expectedByNowMax = rule.maxPerDay !== undefined ? rule.maxPerDay * expectedFraction : undefined;
+
   const remainingNeededForMin = Math.max(0, rule.minPerDay - achievedSoFar);
+  const remainingNeededForMax =
+    rule.maxPerDay !== undefined ? Math.max(0, rule.maxPerDay - achievedSoFar) : undefined;
+
   const requiredPerRemainingHour = hoursRemaining > 0 ? remainingNeededForMin / hoursRemaining : remainingNeededForMin;
+
+  const isBelowTarget = achievedSoFar < expectedByNowMin;
+  const isAboveMax = rule.maxPerDay !== undefined && achievedSoFar > rule.maxPerDay;
 
   return {
     market,
@@ -87,11 +114,21 @@ export function computeMarketPacing(params: {
     hoursElapsed,
     hoursRemaining,
     expectedByNowMin,
+    expectedByNowMax,
     onTrackForMin: achievedSoFar >= expectedByNowMin,
+    onTrackForMax: expectedByNowMax !== undefined ? achievedSoFar >= expectedByNowMax : undefined,
     remainingNeededForMin,
+    remainingNeededForMax,
     requiredPerRemainingHour,
-    isBelowTarget: achievedSoFar < expectedByNowMin,
-    isAboveMax: achievedSoFar > rule.maxPerDay,
+    isBelowTarget,
+    isAboveMax,
+    status: resolveStatus({
+      achievedSoFar,
+      minPerDay: rule.minPerDay,
+      maxPerDay: rule.maxPerDay,
+      hoursRemaining,
+      isBelowTarget,
+    }),
   };
 }
 
