@@ -66,18 +66,46 @@ Each market (`salon-women`, `home-service`, `business-buying`, `business-selling
 
 ### What is intentionally still a gap (needs technical-team/business input)
 
-- **Real API credentials & OAuth integrations** for each social platform are
-  not included — the channel map only defines the *structure* (owner, goal,
-  KPI, access level); a technical team must supply real account handles and
-  API keys.
-- **Persistent storage** (database) — all modules currently operate on
-  in-memory collections suitable for unit testing and as a reference
-  implementation; a production deployment needs a real datastore.
 - **Actual message content/voice** for scripts — placeholder bodies are
   seeded; marketing/sales must supply the final wording per brand voice.
 - **Named individuals** for channel ownership and video-session presenter
   roles — the code enforces that someone must be assigned, but the specific
   person(s) must be decided by the team.
+- **Production-grade auth** for the admin API is a single shared API key
+  (`MW_ADMIN_API_KEY`); per-user accounts/RBAC for the dashboard is a
+  follow-up.
+
+### Persistence, real integrations, and the admin dashboard
+
+Beyond the pure pipeline modules above, the repository now also includes:
+
+| Module | File | Purpose |
+|--------|------|---------|
+| Persistence | `src/modules/persistence.ts`, `src/modules/postgresRepository.ts` | `Repository<T>` interface with an `InMemoryRepository` default and a `PostgresRepository` (JSONB-per-row) so any module can be backed by Postgres/Supabase. Schema: `migrations/001_init.sql`. |
+| Integration credentials | `src/modules/credentialsStore.ts` | Encrypted-at-rest (AES-256-GCM) storage for third-party API keys/tokens (Twilio, WhatsApp, Telegram, Vapi, Zoom, Apollo), keyed by provider, with connection status tracking. Master key from `MW_CREDENTIALS_KEY`. |
+| Twilio Lookup | `src/modules/integrationClients/twilioClient.ts` | `TwilioPhoneValidator` calls the real Twilio Lookup v2 API when credentials are configured, and transparently falls back to the existing local-regex validation otherwise. |
+| WhatsApp/Telegram send | `src/modules/integrationClients/messageSender.ts` | `MessageSender` actually delivers a script's message text via the WhatsApp Business Cloud API or the Telegram Bot API, with retries. |
+| Video/voice sessions | `src/modules/integrationClients/videoSessionProvider.ts` | `VideoSessionProvider` creates a real Zoom meeting, starts a real Vapi outbound call, or attaches a static Google Meet link. |
+| Lead enrichment | `src/modules/integrationClients/apolloClient.ts` | `ApolloClient` enriches a lead's contact profile via Apollo.io. |
+| Market registry | `src/modules/marketRegistry.ts` | Lets a manager add a brand-new market (with its own working hours and daily target rules) from the dashboard, without a code deploy; merges with the 5 built-in markets for pacing/reporting. |
+| Admin API | `src/server/` | Express app (`createApp()`) exposing `/api/credentials` and `/api/markets` CRUD + connection-test + pacing endpoints, protected by an `x-api-key` header (`MW_ADMIN_API_KEY`). |
+| Admin dashboard | `public/dashboard/` | Static, dependency-free HTML/JS admin UI (served at `/dashboard`) to add/test/remove every integration connection and manage markets end-to-end. |
+
+#### Running the admin API + dashboard
+
+```bash
+npm install
+npm run build
+MW_ADMIN_API_KEY=change-me MW_CREDENTIALS_KEY=$(openssl rand -hex 32) npm run start:server
+# open http://localhost:3000/dashboard
+```
+
+Environment variables (see `.env.example`):
+
+- `PORT` — HTTP port (default `3000`).
+- `MW_ADMIN_API_KEY` — required in production; requests to `/api/*` must send it as the `x-api-key` header. If unset, the API is open (development only).
+- `MW_CREDENTIALS_KEY` — required in production; used to derive the AES-256 key that encrypts stored integration credentials. If unset, a random per-process key is used and all stored secrets are lost on restart.
+- `DATABASE_URL` — optional Postgres/Supabase connection string. When set, credentials and custom markets are persisted via `PostgresRepository` using the schema in `migrations/001_init.sql`; when unset, they're kept in memory.
 
 ### Running
 

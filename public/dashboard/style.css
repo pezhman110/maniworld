@@ -1,0 +1,75 @@
+:root {
+  --border: #d9d9e3;
+  --bg: #f7f7fb;
+  --accent: #2f5bea;
+  --text: #1c1c28;
+  --muted: #6b6b7b;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+header {
+  background: white;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+header h1 { font-size: 1.2rem; margin: 0; }
+
+.apikey-bar { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.apikey-bar input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; min-width: 220px; }
+.apikey-bar button { padding: 6px 12px; border-radius: 6px; border: none; background: var(--accent); color: white; cursor: pointer; }
+
+nav { display: flex; gap: 4px; padding: 12px 24px 0; }
+.tab-btn {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: white;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  color: var(--muted);
+}
+.tab-btn.active { color: var(--text); font-weight: 600; background: var(--bg); }
+
+main { padding: 0 24px 40px; }
+.tab { display: none; background: white; border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 24px; }
+.tab.active { display: block; }
+
+.hint { color: var(--muted); font-size: 0.9rem; }
+
+.cards { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  min-width: 220px;
+  background: var(--bg);
+}
+.card h4 { margin: 0 0 6px; }
+.status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.status.connected { background: #d7f5df; color: #157a3f; }
+.status.unverified { background: #fff2cc; color: #8a6d00; }
+.status.invalid { background: #fddede; color: #a3231f; }
+.card button { margin-top: 8px; margin-right: 6px; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: white; cursor: pointer; }
+
+form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-top: 12px; }
+form label { display: flex; flex-direction: column; font-size: 0.85rem; gap: 4px; color: var(--muted); }
+form input, form select { padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
+form button {
+  padding: 10px 18px; border-radius: 6px; border: none; background: var(--accent); color: white; cursor: pointer;
+  height: 38px;
+}
+#fieldsContainer { display: flex; flex-wrap: wrap; gap: 12px; }

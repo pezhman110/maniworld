@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mani World — Admin Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mani World — Admin Dashboard</h1>
+    <div class="apikey-bar">
+      <label for="apiKey">Admin API key</label>
+      <input id="apiKey" type="password" placeholder="x-api-key (leave empty if server has none configured)" />
+      <button id="saveApiKey">Save</button>
+      <span id="apiKeyStatus"></span>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="connections">Connections</button>
+    <button class="tab-btn" data-tab="markets">Markets</button>
+  </nav>
+
+  <main>
+    <section id="tab-connections" class="tab active">
+      <h2>Connections</h2>
+      <p class="hint">Wire up every outreach integration here. Secrets are encrypted at rest and never shown again after saving.</p>
+      <div id="connectionsList" class="cards"></div>
+
+      <h3>Add / update a connection</h3>
+      <form id="connectionForm">
+        <label>Provider
+          <select id="providerSelect"></select>
+        </label>
+        <label>Label
+          <input id="providerLabel" type="text" placeholder="e.g. Production Twilio" required />
+        </label>
+        <div id="fieldsContainer"></div>
+        <button type="submit">Save connection</button>
+      </form>
+    </section>
+
+    <section id="tab-markets" class="tab">
+      <h2>Markets</h2>
+      <p class="hint">The 5 built-in markets are read-only reference. Add a new market type below without any code change.</p>
+      <h3>Built-in markets</h3>
+      <div id="builtInMarkets" class="cards"></div>
+
+      <h3>Custom markets</h3>
+      <div id="customMarkets" class="cards"></div>
+
+      <h3>Add a custom market</h3>
+      <form id="marketForm">
+        <label>Market id <input id="marketId" type="text" placeholder="e.g. franchise-expansion" required /></label>
+        <label>Label <input id="marketLabel" type="text" placeholder="e.g. Franchise Expansion" required /></label>
+        <label>Start hour <input id="marketStartHour" type="number" min="0" max="24" value="9" required /></label>
+        <label>End hour <input id="marketEndHour" type="number" min="0" max="24" value="18" required /></label>
+        <label>Metric <input id="marketMetric" type="text" placeholder="e.g. online-session" required /></label>
+        <label>Min/day <input id="marketMin" type="number" min="0" value="10" required /></label>
+        <label>Max/day (optional) <input id="marketMax" type="number" min="0" /></label>
+        <button type="submit">Add market</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
