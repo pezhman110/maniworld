@@ -215,3 +215,76 @@ export interface DataRetentionPolicy {
   entity: 'lead' | 'interaction' | 'recording';
   retentionDays: number;
 }
+
+/**
+ * Business lines ("markets") the sales org runs at once. Each one gets its
+ * own input panel (lead intake) and output (reporting) as requested:
+ *  - salon-women: women's beauty salon services (per-branch, multi-salon)
+ *  - home-service: at-home beauty service bookings
+ *  - business-buying: helping clients buy a ready-made business/kiosk
+ *  - business-selling: helping clients sell a ready-made business/kiosk
+ *  - investment: salon investment opportunities
+ */
+export type MarketType =
+  | 'salon-women'
+  | 'home-service'
+  | 'business-buying'
+  | 'business-selling'
+  | 'investment';
+
+/** Daily operating window, expressed as local hours (0-24, may equal 24 for midnight). */
+export interface WorkingHours {
+  startHour: number;
+  endHour: number;
+}
+
+export type LocationKind = 'salon-branch' | 'office';
+
+/**
+ * A physical location tied to a market: a salon branch (there can be many,
+ * e.g. "Salon 1", "Salon 2", ...) or the company office (currently a single
+ * office with a sales team).
+ */
+export interface Location {
+  id: string;
+  kind: LocationKind;
+  market: MarketType;
+  name: string;
+  address: string;
+  workingHours: WorkingHours;
+  /** Number of salespeople/staff assigned to this location (e.g. office = 30 sellers). */
+  staffCount?: number;
+  active: boolean;
+}
+
+/** Booking outcome types tracked toward the per-market daily targets. */
+export type TargetMetric =
+  | 'confirmed-booking'
+  | 'online-session'
+  | 'in-person-meeting'
+  | 'online-contact';
+
+/** A minimum/maximum daily target for one market + metric combination. */
+export interface MarketTargetRule {
+  market: MarketType;
+  metric: TargetMetric;
+  minPerDay: number;
+  maxPerDay: number;
+}
+
+/** Real-time/hourly pacing snapshot for one market + metric against its target. */
+export interface MarketPacingReport {
+  market: MarketType;
+  metric: TargetMetric;
+  minPerDay: number;
+  maxPerDay: number;
+  achievedSoFar: number;
+  hoursElapsed: number;
+  hoursRemaining: number;
+  expectedByNowMin: number;
+  onTrackForMin: boolean;
+  remainingNeededForMin: number;
+  requiredPerRemainingHour: number;
+  isBelowTarget: boolean;
+  isAboveMax: boolean;
+}

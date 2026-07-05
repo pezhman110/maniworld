@@ -10,3 +10,5 @@ export * from './modules/videoSession';
 export * from './modules/interactionLog';
 export * from './modules/reporting';
 export * from './modules/security';
+export * from './modules/locations';
+export * from './modules/marketTargets';
