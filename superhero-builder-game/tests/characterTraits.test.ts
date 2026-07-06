@@ -18,15 +18,24 @@ function approvedConceptWithType(concepts: CharacterConceptRegistry, creatorId: 
 }
 
 describe('CharacterTraitsRegistry', () => {
-  it('creates a character with gender from an approved concept with a chosen type', () => {
+  it('creates a character with a name and gender from an approved concept with a chosen type', () => {
     const concepts = new CharacterConceptRegistry();
     const traits = new CharacterTraitsRegistry(concepts);
     const concept = approvedConceptWithType(concepts, 'child_1');
 
-    const character = traits.create(concept.id, 'girl');
+    const character = traits.create(concept.id, 'girl', 'Silver Fox');
+    expect(character.name).toBe('Silver Fox');
     expect(character.gender).toBe('girl');
     expect(character.creatorId).toBe('child_1');
     expect(character.typeOptionId).toBe(concept.chosenTypeOptionId);
+  });
+
+  it('rejects creating a character with a blank name', () => {
+    const concepts = new CharacterConceptRegistry();
+    const traits = new CharacterTraitsRegistry(concepts);
+    const concept = approvedConceptWithType(concepts, 'child_1');
+
+    expect(() => traits.create(concept.id, 'girl', '   ')).toThrow(InvalidCharacterStateError);
   });
 
   it('rejects creating a character before the concept is approved with a chosen type', () => {
@@ -34,14 +43,14 @@ describe('CharacterTraitsRegistry', () => {
     const traits = new CharacterTraitsRegistry(concepts);
     const concept = concepts.describe('child_1', 'A brave little fox');
 
-    expect(() => traits.create(concept.id, 'boy')).toThrow(InvalidCharacterStateError);
+    expect(() => traits.create(concept.id, 'boy', 'Blaze')).toThrow(InvalidCharacterStateError);
   });
 
   it('records powers with description, effect and activation condition', () => {
     const concepts = new CharacterConceptRegistry();
     const traits = new CharacterTraitsRegistry(concepts);
     const concept = approvedConceptWithType(concepts, 'child_1');
-    const character = traits.create(concept.id, 'boy');
+    const character = traits.create(concept.id, 'boy', 'Blaze');
 
     const power = traits.addPower(character.id, 'glowing fists', 'smashes rocks', 'turns on when he claps twice');
     expect(traits.powersFor(character.id)).toEqual([power]);
@@ -52,14 +61,14 @@ describe('CharacterTraitsRegistry', () => {
     const traits = new CharacterTraitsRegistry(concepts, { maxCharactersPerCreator: 2 });
 
     const first = approvedConceptWithType(concepts, 'child_1');
-    traits.create(first.id, 'girl');
+    traits.create(first.id, 'girl', 'Aria');
     const second = approvedConceptWithType(concepts, 'child_1');
-    traits.create(second.id, 'boy');
+    traits.create(second.id, 'boy', 'Blaze');
 
     expect(traits.remainingRosterSlots('child_1')).toBe(0);
 
     const third = approvedConceptWithType(concepts, 'child_1');
-    expect(() => traits.create(third.id, 'girl')).toThrow(RosterLimitExceededError);
+    expect(() => traits.create(third.id, 'girl', 'Nova')).toThrow(RosterLimitExceededError);
   });
 
   it('tracks remaining roster slots correctly as characters are added', () => {
@@ -68,7 +77,7 @@ describe('CharacterTraitsRegistry', () => {
     expect(traits.remainingRosterSlots('child_1')).toBe(5);
 
     const concept = approvedConceptWithType(concepts, 'child_1');
-    traits.create(concept.id, 'girl');
+    traits.create(concept.id, 'girl', 'Silver Fox');
     expect(traits.remainingRosterSlots('child_1')).toBe(4);
   });
 });

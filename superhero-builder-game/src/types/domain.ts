@@ -82,6 +82,8 @@ export interface Character {
   conceptId: string;
   creatorId: string;
   typeOptionId: string;
+  /** Every character must have a name — required so it can be credited in the promo video and marketplace. */
+  name: string;
   gender: CharacterGender;
   createdAt: number;
 }
@@ -256,7 +258,7 @@ export interface ParentalConsent {
 
 export type ModerationDecision = 'approved' | 'rejected';
 
-export type ModerationSubjectKind = 'marketplace-listing' | 'custom-game' | 'physical-print-order';
+export type ModerationSubjectKind = 'marketplace-listing' | 'custom-game' | 'physical-print-order' | 'promo-video';
 
 export interface ModerationReview {
   id: string;
@@ -265,6 +267,80 @@ export interface ModerationReview {
   decision?: ModerationDecision;
   reviewedAt?: number;
   notes?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Character finalization: "closed" -> a confirmation window -> confirmed
+// ---------------------------------------------------------------------------
+
+export type FinalizationStatus = 'awaiting-confirmation' | 'confirmed' | 'reopened';
+
+export interface CharacterFinalization {
+  id: string;
+  characterId: string;
+  status: FinalizationStatus;
+  /** When the character was last closed out (habitat step said "no more home"). */
+  closedAt: number;
+  /** closedAt + the configured confirmation window; confirm() only succeeds at/after this time. */
+  confirmationDueAt: number;
+  confirmedAt?: number;
+  /** How many times the child reopened the character (asked for more changes) during a window. */
+  reopenCount: number;
+}
+
+/** How many days a finished character must sit untouched before it's considered final (default: 2). */
+export interface FinalizationWindowConfig {
+  confirmationWindowDays: number;
+}
+
+export const DEFAULT_FINALIZATION_WINDOW: FinalizationWindowConfig = { confirmationWindowDays: 2 };
+
+// ---------------------------------------------------------------------------
+// Promo video studio: 30s promo video once a character is confirmed final
+// ---------------------------------------------------------------------------
+
+/** Fixed length for every character promo video, per the product spec. */
+export const PROMO_VIDEO_DURATION_SECONDS = 30;
+
+export type PromoVideoStatus =
+  | 'pending-generation'
+  | 'generated'
+  | 'cleared-for-social'
+  | 'queued-for-social'
+  | 'posted';
+
+export interface PromoVideo {
+  id: string;
+  characterId: string;
+  characterName: string;
+  studioName: string;
+  durationSeconds: number;
+  status: PromoVideoStatus;
+  /** Opaque reference to the rendered video asset (external motion-design service). */
+  videoAssetRef?: string;
+  /** On-screen caption/overlay text — always names the studio and the character. */
+  overlayCaption: string;
+  createdAt: number;
+}
+
+export type SocialDestination = 'instagram' | 'facebook' | 'tiktok' | 'linkedin' | 'youtube-shorts';
+
+export type SocialUploadStatus = 'queued' | 'posted' | 'failed-manual-fallback';
+
+/**
+ * A queued/attempted post of a cleared promo video to one external social
+ * destination. Mirrors the official-API-first + manual-fallback pattern
+ * used by the main Mani World CRM's `socialPublisher.ts` — this module
+ * never assumes a post succeeded silently.
+ */
+export interface SocialUploadRecord {
+  id: string;
+  promoVideoId: string;
+  destination: SocialDestination;
+  status: SocialUploadStatus;
+  queuedAt: number;
+  postedAt?: number;
+  failureReason?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -281,6 +357,7 @@ export interface CreatorDashboardSummary {
   cardsCollected: number;
   customGames: CustomGame[];
   activeListings: MarketplaceListing[];
+  promoVideos: PromoVideo[];
   /** True once the creator has an upgrade/subscription unlocking the 3D viewer. */
   has3dViewerAccess: boolean;
 }

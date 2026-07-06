@@ -7,4 +7,6 @@ export * from './modules/marketplace';
 export * from './modules/cardCollection';
 export * from './modules/voiceInput';
 export * from './modules/parentSafety';
+export * from './modules/characterFinalization';
+export * from './modules/promoVideoStudio';
 export * from './modules/creatorDashboard';

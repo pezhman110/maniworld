@@ -23,7 +23,7 @@ function buildCharacter(concepts: CharacterConceptRegistry, traits: CharacterTra
     Array.from({ length: 7 }, (_, i) => ({ label: `Type ${i}`, description: `Description ${i}` }))
   );
   concepts.chooseType(concept.id, options[0].id);
-  return traits.create(concept.id, 'girl');
+  return traits.create(concept.id, 'girl', 'Silver Fox');
 }
 
 describe('CreatorDashboardService', () => {

@@ -59,13 +59,17 @@ export class CharacterTraitsRegistry {
     return Math.max(0, this.limitConfig.maxCharactersPerCreator - used);
   }
 
-  /** Finalizes a character from an approved concept + chosen type, with gender and creator id. */
-  create(conceptId: string, gender: CharacterGender, createdAt: number = Date.now()): Character {
+  /** Finalizes a character from an approved concept + chosen type, with a name, gender and creator id. */
+  create(conceptId: string, gender: CharacterGender, name: string, createdAt: number = Date.now()): Character {
     const concept = this.concepts.getById(conceptId);
     if (concept.status !== 'approved' || !concept.chosenTypeOptionId) {
       throw new InvalidCharacterStateError(
         `Concept ${conceptId} must be approved and have a chosen type before a character can be created.`
       );
+    }
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new InvalidCharacterStateError('Every character must have a non-empty name.');
     }
     const remaining = this.remainingRosterSlots(concept.creatorId);
     if (remaining <= 0) {
@@ -76,6 +80,7 @@ export class CharacterTraitsRegistry {
       conceptId,
       creatorId: concept.creatorId,
       typeOptionId: concept.chosenTypeOptionId,
+      name: trimmedName,
       gender,
       createdAt,
     };
