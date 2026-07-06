@@ -52,6 +52,9 @@ function setupApiKeyBar() {
     refreshCommissionModels();
     refreshResumes();
     refreshLandingPages();
+    refreshProspects();
+    refreshDutyScopes();
+    refreshPipelineOverview();
     setTimeout(() => (status.textContent = ''), 2000);
   });
 }
@@ -609,6 +612,7 @@ async function runProspectAction(id, action) {
         break;
     }
     refreshProspects();
+    refreshPipelineOverview();
   } catch (err) {
     alert(err.message);
   }
@@ -678,9 +682,13 @@ async function refreshDutyScopes() {
                 d.locationId ? ` @ ${d.locationId}` : ''
               }</div><div>${d.visitsPerPeriod} visit(s) / ${d.period}</div><div>Services: ${
                 d.servicesCovered.join(', ') || '-'
-              }</div>${d.commissionPercent !== undefined ? `<div>Commission: ${d.commissionPercent}%</div>` : ''}<div>Status: <strong>${
+              }</div>${d.commissionPercent !== undefined ? `<div>Commission: ${d.commissionPercent}%</div>` : ''}${
+                d.quotas && d.quotas.length
+                  ? `<div>Contract quotas: ${d.quotas.map((q) => `${q.metric} ≥ ${q.minCount}`).join(', ')}</div>`
+                  : ''
+              }<div>Status: <strong>${
                 d.active ? 'active' : 'inactive'
-              }</strong></div><div><button data-checkin="${d.id}">Log check-in (now)</button> ${
+              }</strong></div><div><button data-checkin="${d.id}">Log check-in (now)</button> <button data-quota-status="${d.id}">Check quota status</button> ${
                 d.active ? `<button data-deactivate="${d.id}">Deactivate</button>` : ''
               }</div></div>`
           )
@@ -709,6 +717,48 @@ async function refreshDutyScopes() {
         }
       })
     );
+    container.querySelectorAll('button[data-quota-status]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        document.getElementById('dqrDutyScopeId').value = btn.dataset.quotaStatus;
+        renderQuotaStatus(btn.dataset.quotaStatus);
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function parseQuotasInput(text) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [metric, minCountRaw] = line.split(':').map((s) => s.trim());
+      return { metric, minCount: Number(minCountRaw) };
+    });
+}
+
+async function renderQuotaStatus(dutyScopeId) {
+  const container = document.getElementById('dutyQuotaStatusList');
+  if (!dutyScopeId) {
+    container.innerHTML = '';
+    return;
+  }
+  try {
+    const { statuses } = await apiFetch(`/duty-scope/${dutyScopeId}/quota-status`);
+    container.innerHTML = statuses.length
+      ? statuses
+          .map(
+            (s) =>
+              `<div class="card"><h4>${s.metric}</h4><div>Required: ≥ ${s.minCount}</div><div>Current: ${
+                s.currentCount
+              }</div><div>Status: <strong class="${s.compliant ? 'status connected' : 'status invalid'}">${
+                s.compliant ? 'compliant' : `short by ${s.deficit}`
+              }</strong></div></div>`
+          )
+          .join('')
+      : '<p class="hint">This duty scope has no contract-term quotas defined.</p>';
   } catch (err) {
     container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
   }
@@ -729,12 +779,40 @@ function setupDutyScopeForm() {
       .filter(Boolean);
     const commissionPercentRaw = document.getElementById('dsCommissionPercent').value;
     const commissionPercent = commissionPercentRaw ? Number(commissionPercentRaw) : undefined;
+    const quotas = parseQuotasInput(document.getElementById('dsQuotas').value);
     try {
       await apiFetch('/duty-scope', {
         method: 'POST',
-        body: JSON.stringify({ id, prospectId, locationId, visitsPerPeriod, period, servicesCovered, commissionPercent }),
+        body: JSON.stringify({
+          id,
+          prospectId,
+          locationId,
+          visitsPerPeriod,
+          period,
+          servicesCovered,
+          commissionPercent,
+          quotas: quotas.length ? quotas : undefined,
+        }),
       });
       refreshDutyScopes();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function setupDutyQuotaReadingForm() {
+  document.getElementById('dutyQuotaReadingForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dutyScopeId = document.getElementById('dqrDutyScopeId').value;
+    const metric = document.getElementById('dqrMetric').value;
+    const count = Number(document.getElementById('dqrCount').value);
+    try {
+      await apiFetch(`/duty-scope/${dutyScopeId}/quota-readings`, {
+        method: 'POST',
+        body: JSON.stringify({ metric, count }),
+      });
+      renderQuotaStatus(dutyScopeId);
     } catch (err) {
       alert(err.message);
     }
@@ -769,6 +847,157 @@ function setupDutyComplianceForm() {
   });
 }
 
+/**
+ * The end-to-end pipeline, expressed as a fixed sequence of steps a
+ * prospect moves through: advertisement/landing page + resume intake feed
+ * candidates in, then every `ProspectStatus` value maps onto exactly one
+ * step below (a "fail" branch — disqualified/no-show/rejected — is tracked
+ * per step rather than as its own step).
+ */
+const PIPELINE_STEPS = [
+  { id: 'sourced', label: 'Sourced from network', statuses: ['sourced'] },
+  { id: 'qualified', label: 'Qualified (match ≥ 80%)', statuses: ['qualified'], failStatuses: ['disqualified'] },
+  { id: 'platform-contacted', label: 'Contacted on platform', statuses: ['platform-contacted'] },
+  { id: 'contact-converted', label: 'Converted to email/phone', statuses: ['contact-converted'] },
+  { id: 'direct-contacted', label: 'Direct outreach sent', statuses: ['direct-contacted'] },
+  {
+    id: 'online-session',
+    label: 'Online consultation',
+    statuses: ['online-invited', 'online-completed'],
+    failStatuses: ['online-no-show'],
+  },
+  {
+    id: 'in-person',
+    label: 'In-person screening',
+    statuses: ['in-person-invited', 'in-person-completed'],
+    failStatuses: ['in-person-no-show'],
+  },
+  { id: 'pending-approval', label: 'Pending approval', statuses: ['pending-approval'] },
+  { id: 'approved', label: 'Approved', statuses: ['approved'], failStatuses: ['rejected'] },
+  { id: 'contract-sent', label: 'Contract sent', statuses: ['contract-sent'] },
+];
+
+function stepIndexForStatus(status) {
+  const idx = PIPELINE_STEPS.findIndex((s) => s.statuses.includes(status));
+  if (idx !== -1) return { index: idx, failed: false };
+  const failIdx = PIPELINE_STEPS.findIndex((s) => (s.failStatuses || []).includes(status));
+  if (failIdx !== -1) return { index: failIdx, failed: true };
+  return { index: -1, failed: false };
+}
+
+/** Renders a single prospect's current position along the fixed step sequence. */
+function renderStepper(container, currentIndex, failed) {
+  const items = PIPELINE_STEPS.map((step, i) => {
+    let cls = 'step';
+    if (i < currentIndex) cls += ' step-done';
+    else if (i === currentIndex) cls += failed ? ' step-failed' : ' step-current';
+    return `<div class="${cls}"><span class="step-index">${i + 1}</span><span class="step-label">${step.label}</span></div>`;
+  });
+  container.innerHTML = `<div class="stepper-row">${items.join('<div class="step-connector"></div>')}</div>`;
+}
+
+async function refreshPipelineOverview() {
+  const kpiContainer = document.getElementById('pipelineKpis');
+  const funnelContainer = document.getElementById('pipelineFunnel');
+  const quotaAlerts = document.getElementById('pipelineQuotaAlerts');
+  try {
+    const [{ resumes }, { landingPages }, { prospects }, { dutyScopes }, { nonCompliant }] = await Promise.all([
+      apiFetch('/presentation/resumes'),
+      apiFetch('/presentation/landing-pages'),
+      apiFetch('/outreach/prospects'),
+      apiFetch('/duty-scope'),
+      apiFetch('/duty-scope/quota-status/non-compliant'),
+    ]);
+
+    const contractsSent = prospects.filter((p) => p.status === 'contract-sent').length;
+    const activeDutyScopes = dutyScopes.filter((d) => d.active).length;
+
+    kpiContainer.innerHTML = [
+      { label: 'Landing pages', value: landingPages.length },
+      { label: 'Resumes received', value: resumes.length },
+      { label: 'Prospects sourced', value: prospects.length },
+      { label: 'Contracts sent', value: contractsSent },
+      { label: 'Active duty scopes', value: activeDutyScopes },
+      { label: 'Quotas currently short', value: nonCompliant.length },
+    ]
+      .map((k) => `<div class="kpi-card"><div class="kpi-value">${k.value}</div><div class="kpi-label">${k.label}</div></div>`)
+      .join('');
+
+    const counts = PIPELINE_STEPS.map(() => 0);
+    let failedCount = 0;
+    prospects.forEach((p) => {
+      const { index, failed } = stepIndexForStatus(p.status);
+      if (index === -1) return;
+      if (failed) failedCount += 1;
+      else counts[index] += 1;
+    });
+    const funnelSteps = PIPELINE_STEPS.map(
+      (step, i) =>
+        `<div class="step step-done"><span class="step-index">${i + 1}</span><span class="step-label">${step.label}</span><span class="step-count">${counts[i]}</span></div>`
+    ).join('<div class="step-connector"></div>');
+    funnelContainer.innerHTML =
+      `<div class="stepper-row">${funnelSteps}</div>` +
+      (failedCount ? `<p class="hint">${failedCount} prospect(s) disqualified / no-show / rejected along the way.</p>` : '');
+
+    quotaAlerts.innerHTML = nonCompliant.length
+      ? nonCompliant
+          .map(
+            (entry) =>
+              `<div class="card"><h4>${entry.dutyScopeId}</h4><div>Prospect: ${entry.prospectId}</div>${entry.statuses
+                .map((s) => `<div>${s.metric}: ${s.currentCount}/${s.minCount} (short by ${s.deficit})</div>`)
+                .join('')}</div>`
+          )
+          .join('')
+      : '<p class="hint">All contract-term quotas are currently met.</p>';
+  } catch (err) {
+    kpiContainer.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupPipelineTrackForm() {
+  document.getElementById('pipelineTrackForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pipelineProspectId').value.trim();
+    const container = document.getElementById('pipelineProspectStepper');
+    if (!id) return;
+    try {
+      const { prospect } = await apiFetch(`/outreach/prospects/${encodeURIComponent(id)}`);
+      const { index, failed } = stepIndexForStatus(prospect.status);
+      renderStepper(container, index, failed);
+
+      let extraHtml = `<p class="hint">Status: <strong>${prospect.status}</strong></p>`;
+      if (prospect.status === 'contract-sent') {
+        const { dutyScopes } = await apiFetch(`/duty-scope?prospectId=${encodeURIComponent(id)}`);
+        if (dutyScopes.length) {
+          const cards = await Promise.all(
+            dutyScopes.map(async (d) => {
+              const { statuses } = await apiFetch(`/duty-scope/${d.id}/quota-status`);
+              return `<div class="card"><h4>Duty scope ${d.id}</h4><div>${d.visitsPerPeriod} visit(s) / ${d.period}</div>${
+                statuses.length
+                  ? statuses
+                      .map(
+                        (s) =>
+                          `<div>${s.metric}: ${s.currentCount}/${s.minCount} — ${
+                            s.compliant ? 'OK' : `short by ${s.deficit}`
+                          }</div>`
+                      )
+                      .join('')
+                  : '<div>No contract-term quotas set.</div>'
+              }</div>`;
+            })
+          );
+          extraHtml += `<div class="cards">${cards.join('')}</div>`;
+        } else {
+          extraHtml += '<p class="hint">No duty scope defined yet for this prospect.</p>';
+        }
+      }
+      container.insertAdjacentHTML('beforeend', extraHtml);
+    } catch (err) {
+      container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+    }
+  });
+}
+
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
@@ -781,7 +1010,9 @@ setupLandingPageForm();
 setupOutreachScriptForm();
 setupProspectForm();
 setupDutyScopeForm();
+setupDutyQuotaReadingForm();
 setupDutyComplianceForm();
+setupPipelineTrackForm();
 refreshConnections();
 refreshMarkets();
 refreshAudienceProfiles();
@@ -790,3 +1021,4 @@ refreshResumes();
 refreshLandingPages();
 refreshProspects();
 refreshDutyScopes();
+refreshPipelineOverview();

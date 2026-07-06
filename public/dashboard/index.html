@@ -18,7 +18,8 @@
   </header>
 
   <nav>
-    <button class="tab-btn active" data-tab="connections">Connections</button>
+    <button class="tab-btn active" data-tab="pipeline">Pipeline Overview</button>
+    <button class="tab-btn" data-tab="connections">Connections</button>
     <button class="tab-btn" data-tab="markets">Markets</button>
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
     <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
@@ -26,7 +27,34 @@
   </nav>
 
   <main>
-    <section id="tab-connections" class="tab active">
+    <section id="tab-pipeline" class="tab active">
+      <h2>Pipeline Overview — Step by Step</h2>
+      <p class="hint">
+        The full journey in one place: advertisement/landing page → resume intake (Indeed / LinkedIn /
+        manual / other) → account sourced &amp; qualified → contacted on their own platform → converted to
+        email/phone → contacted directly → online consultation → in-person screening → hand-off for
+        approval → contract sent → post-contract duty scope &amp; contract-term quotas (e.g. minimum active
+        clients or bank experts in the network).
+      </p>
+
+      <h3>Key numbers</h3>
+      <div id="pipelineKpis" class="kpi-grid"></div>
+
+      <h3>Funnel — every prospect, by step</h3>
+      <div id="pipelineFunnel" class="stepper"></div>
+
+      <h3>Track a single prospect</h3>
+      <form id="pipelineTrackForm">
+        <label>Prospect id <input id="pipelineProspectId" type="text" placeholder="e.g. prospect-1" required /></label>
+        <button type="submit">Show journey</button>
+      </form>
+      <div id="pipelineProspectStepper" class="stepper"></div>
+
+      <h3>Contract-term quotas currently short (needs follow-up)</h3>
+      <div id="pipelineQuotaAlerts" class="cards"></div>
+    </section>
+
+    <section id="tab-connections" class="tab">
       <h2>Connections</h2>
       <p class="hint">Wire up every outreach integration here. Secrets are encrypted at rest and never shown again after saving.</p>
       <div id="connectionsList" class="cards"></div>
@@ -201,11 +229,24 @@
         </label>
         <label>Services covered (comma separated) <input id="dsServicesCovered" type="text" placeholder="manicure, hair" /></label>
         <label>Commission % (optional) <input id="dsCommissionPercent" type="number" min="0" max="100" /></label>
+        <label>Contract-term quotas (metric:minCount per line, e.g. "active-clients:40")
+          <textarea id="dsQuotas" placeholder="active-clients:40&#10;bank-experts-in-network:30"></textarea>
+        </label>
         <button type="submit">Define duty scope</button>
       </form>
 
       <h3>Duty scopes</h3>
       <div id="dutyScopesList" class="cards"></div>
+
+      <h3>Record a contract-term quota reading</h3>
+      <p class="hint">E.g. "42 active clients" or "31 bank experts in the network" — checked against the minimum agreed for that duty scope.</p>
+      <form id="dutyQuotaReadingForm">
+        <label>Duty scope id <input id="dqrDutyScopeId" type="text" placeholder="e.g. duty_1" required /></label>
+        <label>Metric <input id="dqrMetric" type="text" placeholder="e.g. active-clients" required /></label>
+        <label>Count <input id="dqrCount" type="number" min="0" required /></label>
+        <button type="submit">Record reading</button>
+      </form>
+      <div id="dutyQuotaStatusList" class="cards"></div>
 
       <h3>Weekly compliance monitoring</h3>
       <form id="dutyComplianceForm">

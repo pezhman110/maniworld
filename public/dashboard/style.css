@@ -2,8 +2,11 @@
   --border: #d9d9e3;
   --bg: #f7f7fb;
   --accent: #2f5bea;
+  --accent-dark: #1d3fb0;
   --text: #1c1c28;
   --muted: #6b6b7b;
+  --success: #157a3f;
+  --danger: #a3231f;
 }
 
 * { box-sizing: border-box; }
@@ -16,9 +19,10 @@ body {
 }
 
 header {
-  background: white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
   border-bottom: 1px solid var(--border);
-  padding: 16px 24px;
+  padding: 18px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,13 +30,15 @@ header {
   gap: 12px;
 }
 
-header h1 { font-size: 1.2rem; margin: 0; }
+header h1 { font-size: 1.25rem; margin: 0; font-weight: 700; letter-spacing: 0.2px; }
 
 .apikey-bar { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
+.apikey-bar label { color: rgba(255, 255, 255, 0.85); }
 .apikey-bar input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; min-width: 220px; }
-.apikey-bar button { padding: 6px 12px; border-radius: 6px; border: none; background: var(--accent); color: white; cursor: pointer; }
+.apikey-bar button { padding: 6px 12px; border-radius: 6px; border: none; background: white; color: var(--accent-dark); font-weight: 600; cursor: pointer; }
+.apikey-bar #apiKeyStatus { color: white; }
 
-nav { display: flex; gap: 4px; padding: 12px 24px 0; }
+nav { display: flex; gap: 4px; padding: 12px 24px 0; flex-wrap: wrap; }
 .tab-btn {
   padding: 10px 18px;
   border: 1px solid var(--border);
@@ -41,11 +47,12 @@ nav { display: flex; gap: 4px; padding: 12px 24px 0; }
   border-radius: 8px 8px 0 0;
   cursor: pointer;
   color: var(--muted);
+  font-weight: 500;
 }
-.tab-btn.active { color: var(--text); font-weight: 600; background: var(--bg); }
+.tab-btn.active { color: var(--accent-dark); font-weight: 700; background: var(--bg); }
 
 main { padding: 0 24px 40px; }
-.tab { display: none; background: white; border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 24px; }
+.tab { display: none; background: white; border: 1px solid var(--border); border-radius: 0 8px 8px 8px; padding: 24px; box-shadow: 0 1px 3px rgba(28, 28, 40, 0.05); }
 .tab.active { display: block; }
 
 .hint { color: var(--muted); font-size: 0.9rem; }
@@ -71,6 +78,55 @@ form input, form select, form textarea { padding: 8px; border: 1px solid var(--b
 form textarea { min-width: 220px; min-height: 60px; resize: vertical; }
 form button {
   padding: 10px 18px; border-radius: 6px; border: none; background: var(--accent); color: white; cursor: pointer;
-  height: 38px;
+  height: 38px; font-weight: 600;
 }
+form button:hover { background: var(--accent-dark); }
 #fieldsContainer { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* Pipeline overview: KPI cards + step-by-step stepper */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0 24px; }
+.kpi-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  background: linear-gradient(160deg, white, var(--bg));
+  text-align: center;
+}
+.kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--accent-dark); }
+.kpi-label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+.stepper { margin: 16px 0 24px; }
+.stepper-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0; }
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 110px;
+  max-width: 130px;
+  text-align: center;
+  padding: 10px 6px;
+}
+.step-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.step-label { font-size: 0.75rem; color: var(--muted); }
+.step-count { font-size: 0.95rem; font-weight: 700; color: var(--accent-dark); }
+.step-connector { flex: 1 1 20px; min-width: 20px; height: 2px; background: var(--border); margin-top: -20px; }
+
+.step-done .step-index, .step.step-done .step-index { background: var(--success); color: white; }
+.step-done .step-label { color: var(--text); }
+.step-current .step-index { background: var(--accent); color: white; }
+.step-current .step-label { color: var(--accent-dark); font-weight: 700; }
+.step-failed .step-index { background: var(--danger); color: white; }
+.step-failed .step-label { color: var(--danger); font-weight: 700; }
+
