@@ -1,4 +1,13 @@
-import { DutyCheckIn, DutyPeriod, DutyScope, Prospect, WeeklyComplianceReport } from '../types/domain';
+import {
+  DutyCheckIn,
+  DutyPeriod,
+  DutyQuota,
+  DutyQuotaReading,
+  DutyQuotaStatus,
+  DutyScope,
+  Prospect,
+  WeeklyComplianceReport,
+} from '../types/domain';
 
 /**
  * Post-contract duty-scope module.
@@ -22,6 +31,9 @@ export class DutyScopeRegistry {
   private scopeSequence = 0;
   private checkInSequence = 0;
 
+  private quotaReadings: DutyQuotaReading[] = [];
+  private quotaReadingSequence = 0;
+
   /** Defines the post-contract duty scope for a prospect whose contract has already been sent. */
   define(
     prospect: Prospect,
@@ -32,6 +44,11 @@ export class DutyScopeRegistry {
       period: DutyPeriod;
       servicesCovered: string[];
       commissionPercent?: number;
+      /**
+       * Contract-term headcount/relationship quotas, e.g. "at least 40
+       * active clients" or "at least 30 bank experts in the network".
+       */
+      quotas?: DutyQuota[];
       notes?: string;
       now?: number;
     }
@@ -52,6 +69,7 @@ export class DutyScopeRegistry {
         throw new Error(`"commissionPercent" must be a number between 0 and 100, got ${params.commissionPercent}.`);
       }
     }
+    const quotas = this.validateQuotas(params.quotas);
 
     this.scopeSequence += 1;
     const scope: DutyScope = {
@@ -62,12 +80,33 @@ export class DutyScopeRegistry {
       period: params.period,
       servicesCovered: [...params.servicesCovered],
       commissionPercent: params.commissionPercent,
+      quotas,
       notes: params.notes,
       definedAt: params.now ?? Date.now(),
       active: true,
     };
     this.scopes.set(scope.id, scope);
     return scope;
+  }
+
+  private validateQuotas(quotas: DutyQuota[] | undefined): DutyQuota[] | undefined {
+    if (quotas === undefined) return undefined;
+    if (!Array.isArray(quotas) || quotas.length === 0) return undefined;
+    const seen = new Set<string>();
+    return quotas.map((q) => {
+      if (!q.metric || !q.metric.trim()) {
+        throw new Error('Every quota must have a non-empty "metric" (e.g. "active-clients", "bank-experts-in-network").');
+      }
+      if (!Number.isFinite(q.minCount) || q.minCount <= 0) {
+        throw new Error(`"minCount" for quota "${q.metric}" must be a positive number, got ${q.minCount}.`);
+      }
+      const metric = q.metric.trim();
+      if (seen.has(metric)) {
+        throw new Error(`Duplicate quota metric "${metric}".`);
+      }
+      seen.add(metric);
+      return { metric, minCount: q.minCount };
+    });
   }
 
   get(id: string): DutyScope | undefined {
@@ -105,6 +144,83 @@ export class DutyScopeRegistry {
 
   listCheckIns(dutyScopeId: string): DutyCheckIn[] {
     return this.checkIns.filter((c) => c.dutyScopeId === dutyScopeId);
+  }
+
+  /**
+   * Records a fresh count against one of the duty scope's agreed
+   * contract-term quotas, e.g. "42 active clients" or "31 bank experts in
+   * the network". `metric` must match one of the quotas defined on the
+   * scope.
+   */
+  recordQuotaReading(
+    dutyScopeId: string,
+    metric: string,
+    count: number,
+    params: { notes?: string; now?: number } = {}
+  ): DutyQuotaReading {
+    const scope = this.mustGet(dutyScopeId);
+    const quota = (scope.quotas ?? []).find((q) => q.metric === metric);
+    if (!quota) {
+      throw new Error(`Duty scope "${dutyScopeId}" has no quota for metric "${metric}".`);
+    }
+    if (!Number.isFinite(count) || count < 0) {
+      throw new Error(`"count" must be a non-negative number, got ${count}.`);
+    }
+    this.quotaReadingSequence += 1;
+    const reading: DutyQuotaReading = {
+      id: `quota_reading_${this.quotaReadingSequence}`,
+      dutyScopeId,
+      metric,
+      count,
+      recordedAt: params.now ?? Date.now(),
+      notes: params.notes,
+    };
+    this.quotaReadings.push(reading);
+    return reading;
+  }
+
+  listQuotaReadings(dutyScopeId: string, metric?: string): DutyQuotaReading[] {
+    return this.quotaReadings.filter(
+      (r) => r.dutyScopeId === dutyScopeId && (metric === undefined || r.metric === metric)
+    );
+  }
+
+  /**
+   * Compares each of the duty scope's agreed quotas (e.g. "at least 40
+   * active clients", "at least 30 bank experts in the network") against its
+   * most recently recorded reading, flagging any shortfall - the requested
+   * "شرط قرارداد ... رعایت شود" control.
+   */
+  getQuotaStatuses(dutyScopeId: string): DutyQuotaStatus[] {
+    const scope = this.mustGet(dutyScopeId);
+    return (scope.quotas ?? []).map((quota) => {
+      const readings = this.listQuotaReadings(dutyScopeId, quota.metric);
+      const latest = readings.reduce<DutyQuotaReading | undefined>(
+        (best, r) => (!best || r.recordedAt > best.recordedAt ? r : best),
+        undefined
+      );
+      const currentCount = latest?.count ?? 0;
+      const deficit = Math.max(0, quota.minCount - currentCount);
+      return {
+        metric: quota.metric,
+        minCount: quota.minCount,
+        currentCount,
+        compliant: deficit === 0,
+        deficit,
+        lastRecordedAt: latest?.recordedAt,
+      };
+    });
+  }
+
+  /** Every active duty scope that has at least one quota currently falling short of its agreed minimum. */
+  listNonCompliantQuotas(onlyActive = true): { dutyScopeId: string; prospectId: string; statuses: DutyQuotaStatus[] }[] {
+    return this.all(onlyActive)
+      .map((scope) => ({
+        dutyScopeId: scope.id,
+        prospectId: scope.prospectId,
+        statuses: this.getQuotaStatuses(scope.id).filter((s) => !s.compliant),
+      }))
+      .filter((entry) => entry.statuses.length > 0);
   }
 
   /** How many visits are expected in a single week, given the duty scope's period. */

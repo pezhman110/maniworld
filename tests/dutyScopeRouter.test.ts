@@ -134,4 +134,68 @@ describe('duty-scope API', () => {
     const deactivateRes = await request(app).post('/api/duty-scope/missing/deactivate');
     expect(deactivateRes.status).toBe(404);
   });
+
+  it('defines quotas, records readings, and reports quota compliance end-to-end', async () => {
+    const app = buildApp();
+    await driveProspectToContractSent(app, 'prospect-1');
+
+    const defineRes = await request(app).post('/api/duty-scope').send({
+      prospectId: 'prospect-1',
+      visitsPerPeriod: 2,
+      period: 'day',
+      servicesCovered: ['manicure'],
+      quotas: [
+        { metric: 'active-clients', minCount: 40 },
+        { metric: 'bank-experts-in-network', minCount: 30 },
+      ],
+    });
+    expect(defineRes.status).toBe(201);
+    const dutyScopeId = defineRes.body.dutyScope.id;
+    expect(defineRes.body.dutyScope.quotas).toHaveLength(2);
+
+    const readingRes = await request(app)
+      .post(`/api/duty-scope/${dutyScopeId}/quota-readings`)
+      .send({ metric: 'active-clients', count: 25 });
+    expect(readingRes.status).toBe(201);
+    expect(readingRes.body.reading.count).toBe(25);
+
+    const readingsRes = await request(app).get(`/api/duty-scope/${dutyScopeId}/quota-readings`);
+    expect(readingsRes.status).toBe(200);
+    expect(readingsRes.body.readings).toHaveLength(1);
+
+    const statusRes = await request(app).get(`/api/duty-scope/${dutyScopeId}/quota-status`);
+    expect(statusRes.status).toBe(200);
+    expect(statusRes.body.statuses).toHaveLength(2);
+    const activeClientsStatus = statusRes.body.statuses.find((s: { metric: string }) => s.metric === 'active-clients');
+    expect(activeClientsStatus.compliant).toBe(false);
+    expect(activeClientsStatus.deficit).toBe(15);
+
+    const nonCompliantRes = await request(app).get('/api/duty-scope/quota-status/non-compliant');
+    expect(nonCompliantRes.status).toBe(200);
+    expect(nonCompliantRes.body.nonCompliant).toHaveLength(1);
+    expect(nonCompliantRes.body.nonCompliant[0].dutyScopeId).toBe(dutyScopeId);
+  });
+
+  it('returns 404/400 for invalid quota reading requests', async () => {
+    const app = buildApp();
+    const missingScopeRes = await request(app)
+      .post('/api/duty-scope/missing/quota-readings')
+      .send({ metric: 'active-clients', count: 1 });
+    expect(missingScopeRes.status).toBe(404);
+
+    await driveProspectToContractSent(app, 'prospect-3');
+    const defineRes = await request(app).post('/api/duty-scope').send({
+      prospectId: 'prospect-3',
+      visitsPerPeriod: 2,
+      period: 'day',
+      servicesCovered: [],
+      quotas: [{ metric: 'active-clients', minCount: 40 }],
+    });
+    const dutyScopeId = defineRes.body.dutyScope.id;
+
+    const unknownMetricRes = await request(app)
+      .post(`/api/duty-scope/${dutyScopeId}/quota-readings`)
+      .send({ metric: 'unknown-metric', count: 1 });
+    expect(unknownMetricRes.status).toBe(400);
+  });
 });

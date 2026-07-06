@@ -872,6 +872,37 @@ export interface Prospect {
 
 export type DutyPeriod = 'day' | 'week';
 
+/**
+ * A minimum-headcount/relationship-count quota agreed as a contract term,
+ * e.g. "at least 40 active clients", "at least 30 bank experts in the
+ * network", or "at least 50 salons connected". `metric` is a free-form
+ * label (the same string is used when recording readings against it).
+ */
+export interface DutyQuota {
+  metric: string;
+  minCount: number;
+}
+
+/** A point-in-time reading of how many are currently counted against a quota metric. */
+export interface DutyQuotaReading {
+  id: string;
+  dutyScopeId: string;
+  metric: string;
+  count: number;
+  recordedAt: number;
+  notes?: string;
+}
+
+/** Compliance status for a single quota metric, comparing the latest reading to the agreed minimum. */
+export interface DutyQuotaStatus {
+  metric: string;
+  minCount: number;
+  currentCount: number;
+  compliant: boolean;
+  deficit: number;
+  lastRecordedAt?: number;
+}
+
 /** The post-contract job description agreed for a given prospect/network partner. */
 export interface DutyScope {
   id: string;
@@ -884,6 +915,12 @@ export interface DutyScope {
   servicesCovered: string[];
   /** Optional commission/compensation percentage tied to this duty scope. */
   commissionPercent?: number;
+  /**
+   * Optional contract-term headcount/relationship quotas, e.g. "must
+   * maintain at least 40 active clients" or "at least 30 bank experts in
+   * the network".
+   */
+  quotas?: DutyQuota[];
   notes?: string;
   definedAt: number;
   active: boolean;

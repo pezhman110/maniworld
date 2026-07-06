@@ -101,5 +101,40 @@ export function createDutyScopeRouter(deps: { dutyScopes: DutyScopeRegistry; pro
     }
   });
 
+  router.post('/:id/quota-readings', (req, res) => {
+    try {
+      const { metric, count, notes, now } = req.body ?? {};
+      const reading = dutyScopes.recordQuotaReading(req.params.id, metric, Number(count), {
+        notes,
+        now: now ? Number(now) : undefined,
+      });
+      res.status(201).json({ reading });
+    } catch (err) {
+      handleError(res, err, err instanceof Error && /not found/.test(err.message) ? 404 : 400);
+    }
+  });
+
+  router.get('/:id/quota-readings', (req, res) => {
+    try {
+      const metric = req.query.metric as string | undefined;
+      res.json({ readings: dutyScopes.listQuotaReadings(req.params.id, metric) });
+    } catch (err) {
+      handleError(res, err, 404);
+    }
+  });
+
+  router.get('/:id/quota-status', (req, res) => {
+    try {
+      res.json({ statuses: dutyScopes.getQuotaStatuses(req.params.id) });
+    } catch (err) {
+      handleError(res, err, 404);
+    }
+  });
+
+  router.get('/quota-status/non-compliant', (req, res) => {
+    const onlyActive = req.query.onlyActive !== 'false';
+    res.json({ nonCompliant: dutyScopes.listNonCompliantQuotas(onlyActive) });
+  });
+
   return router;
 }
