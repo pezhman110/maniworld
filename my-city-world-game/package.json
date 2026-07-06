@@ -1,0 +1,19 @@
+{
+  "name": "my-city-world-game",
+  "version": "0.1.0",
+  "description": "My Living City (/mycity): a safe, ever-growing living-city builder for kids 6-9, where a child pieces together their real world (home, street, family, friends, everyday life) from typed/spoken/archived sentences that become professional cartoon stickers.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "typescript": "^5.5.3"
+  }
+}
