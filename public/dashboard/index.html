@@ -21,6 +21,7 @@
     <button class="tab-btn active" data-tab="connections">Connections</button>
     <button class="tab-btn" data-tab="markets">Markets</button>
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
+    <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
   </nav>
 
   <main>
@@ -132,6 +133,48 @@
         </label>
         <label>Lead form fields (comma separated) <input id="lpLeadFormFields" type="text" placeholder="fullName, phone, company" /></label>
         <button type="submit">Save landing page</button>
+      </form>
+    </section>
+    <section id="tab-outreach" class="tab">
+      <h2>Prospect Outreach</h2>
+      <p class="hint">
+        Search a network for accounts matching a recruitment plan, score the match, and once it
+        crosses 80% work the prospect through: contact inside their own platform, convert the
+        account to an email/phone, contact directly, invite to an online consultation (combined
+        default + custom script), invite in person to the salon/office (controlled visiting
+        hours), hand the list to the responsible person, and send the contract once approved.
+      </p>
+
+      <h3>Outreach scripts (per audience profile / platform key)</h3>
+      <form id="outreachScriptForm">
+        <label>Key <input id="oScriptKey" type="text" placeholder="e.g. influencer" required /></label>
+        <label>Base script <textarea id="oScriptBase" placeholder="Your default script"></textarea></label>
+        <label>Add custom segment <textarea id="oScriptCustom" placeholder="Extra text to append"></textarea></label>
+        <button type="submit">Save script</button>
+      </form>
+      <div id="outreachScriptPreview" class="hint"></div>
+
+      <h3>Prospects</h3>
+      <div id="prospectsList" class="cards"></div>
+      <form id="prospectForm">
+        <label>Id (optional) <input id="pId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Plan id <input id="pPlanId" type="text" placeholder="e.g. plan-1" required /></label>
+        <label>Audience profile id (optional) <input id="pAudienceProfileId" type="text" /></label>
+        <label>Platform
+          <select id="pPlatform">
+            <option value="instagram">instagram</option>
+            <option value="linkedin">linkedin</option>
+            <option value="telegram">telegram</option>
+            <option value="x">x</option>
+            <option value="website">website</option>
+            <option value="bank-portal">bank-portal</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+        <label>Account handle <input id="pAccountHandle" type="text" placeholder="e.g. @jane" required /></label>
+        <label>Display name (optional) <input id="pDisplayName" type="text" /></label>
+        <label>Match score (0-100) <input id="pMatchScore" type="number" min="0" max="100" required /></label>
+        <button type="submit">Add prospect</button>
       </form>
     </section>
   </main>

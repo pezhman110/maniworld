@@ -8,11 +8,13 @@ import {
   LandingPageRegistry,
   ResumeIntakeRegistry,
 } from '../modules/presentationCampaigns';
+import { OutreachProspectRegistry, OutreachScriptRegistry } from '../modules/prospectOutreach';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { createCredentialsRouter } from './routes/credentialsRouter';
 import { createMarketsRouter } from './routes/marketsRouter';
 import { createPresentationRouter } from './routes/presentationRouter';
+import { createProspectOutreachRouter } from './routes/prospectOutreachRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -21,6 +23,8 @@ export interface CreateAppOptions {
   commissionModels?: CommissionModelRegistry;
   resumeIntakes?: ResumeIntakeRegistry;
   landingPages?: LandingPageRegistry;
+  prospects?: OutreachProspectRegistry;
+  outreachScripts?: OutreachScriptRegistry;
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
   adminApiKey?: string;
@@ -40,6 +44,8 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const commissionModels = options.commissionModels ?? new CommissionModelRegistry();
   const resumeIntakes = options.resumeIntakes ?? new ResumeIntakeRegistry();
   const landingPages = options.landingPages ?? new LandingPageRegistry();
+  const prospects = options.prospects ?? new OutreachProspectRegistry();
+  const outreachScripts = options.outreachScripts ?? new OutreachScriptRegistry();
   const testConnection = options.testConnection ?? createConnectionTester();
 
   const app = express();
@@ -55,6 +61,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
     auth,
     createPresentationRouter({ audienceProfiles, commissionModels, resumeIntakes, landingPages })
   );
+  app.use('/api/outreach', auth, createProspectOutreachRouter({ prospects, scripts: outreachScripts }));
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));

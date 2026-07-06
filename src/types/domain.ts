@@ -773,3 +773,88 @@ export interface LandingPageSite {
   createdAt: number;
   active: boolean;
 }
+
+/**
+ * Prospect outreach pipeline types.
+ *
+ * Covers the "search for accounts matching our plan on a social/professional
+ * network (influencer / freelancer / banking), score the match, and once it
+ * crosses 80% work the account all the way to a signed contract" flow:
+ * source -> qualify (>=80%) -> contact in the account's own environment ->
+ * convert the account to an email/phone -> direct contact -> invite to an
+ * online consultation (with a script) -> invite to the salon/office (with
+ * a controlled time slot) -> hand the approved list to the responsible
+ * person -> approve/reject -> send the contract.
+ */
+
+export type OutreachPlatform = 'instagram' | 'linkedin' | 'telegram' | 'x' | 'website' | 'bank-portal' | 'other';
+
+export type ProspectStatus =
+  | 'sourced'
+  | 'qualified'
+  | 'disqualified'
+  | 'platform-contacted'
+  | 'contact-converted'
+  | 'direct-contacted'
+  | 'online-invited'
+  | 'online-completed'
+  | 'online-no-show'
+  | 'in-person-invited'
+  | 'in-person-completed'
+  | 'in-person-no-show'
+  | 'pending-approval'
+  | 'approved'
+  | 'rejected'
+  | 'contract-sent';
+
+/** The online-consultation invite: a scheduled time plus the combined (default + manually-added) script used on the call. */
+export interface OnlineSessionInvite {
+  scheduledAt: number;
+  script: string;
+  outcome?: 'completed' | 'no-show';
+}
+
+/** The in-person invite to the salon/office, with the controlled time slot the requirement calls for. */
+export interface InPersonVisit {
+  locationId: string;
+  scheduledAt: number;
+  durationMinutes: number;
+  outcome?: 'completed' | 'no-show';
+}
+
+/** The hand-off to the responsible person who must approve a prospect before a contract is sent. */
+export interface ApprovalRecord {
+  responsibleContact: string;
+  submittedAt: number;
+  decision?: 'approved' | 'rejected';
+  decidedBy?: string;
+  decidedAt?: number;
+}
+
+/**
+ * A candidate account found on a social/professional network (or banking
+ * portal) while searching for matches against a recruitment plan
+ * (`RecruitmentPlan.id`) and/or an audience profile.
+ */
+export interface Prospect {
+  id: string;
+  planId: string;
+  audienceProfileId?: string;
+  platform: OutreachPlatform;
+  accountHandle: string;
+  displayName?: string;
+  /** How well this account matches the plan's criteria, 0-100; only >=80 is auto-qualified for outreach. */
+  matchScore: number;
+  status: ProspectStatus;
+  email?: string;
+  phone?: string;
+  /** The message sent inside the account's own platform (e.g. an Instagram/LinkedIn DM), before contact details are known. */
+  platformMessage?: string;
+  directOutreachChannel?: 'email' | 'phone';
+  directOutreachMessage?: string;
+  onlineSession?: OnlineSessionInvite;
+  inPersonVisit?: InPersonVisit;
+  approval?: ApprovalRecord;
+  notes?: string;
+  createdAt: number;
+}

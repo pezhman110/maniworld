@@ -434,6 +434,238 @@ function setupLandingPageForm() {
   });
 }
 
+function refreshOutreachScriptPreview() {
+  const key = document.getElementById('oScriptKey').value.trim();
+  const preview = document.getElementById('outreachScriptPreview');
+  if (!key) {
+    preview.textContent = '';
+    return;
+  }
+  apiFetch(`/outreach/scripts/${encodeURIComponent(key)}`)
+    .then(({ script }) => {
+      preview.textContent = `Combined script for "${key}": ${script}`;
+    })
+    .catch((err) => {
+      preview.textContent = `Failed to load: ${err.message}`;
+    });
+}
+
+function setupOutreachScriptForm() {
+  document.getElementById('outreachScriptForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const key = document.getElementById('oScriptKey').value.trim();
+    const base = document.getElementById('oScriptBase').value;
+    const custom = document.getElementById('oScriptCustom').value;
+    try {
+      if (base) {
+        await apiFetch(`/outreach/scripts/${encodeURIComponent(key)}/base`, {
+          method: 'PUT',
+          body: JSON.stringify({ text: base }),
+        });
+      }
+      if (custom) {
+        await apiFetch(`/outreach/scripts/${encodeURIComponent(key)}/custom-segments`, {
+          method: 'POST',
+          body: JSON.stringify({ text: custom }),
+        });
+      }
+      document.getElementById('oScriptCustom').value = '';
+      refreshOutreachScriptPreview();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+const PROSPECT_ACTIONS = {
+  sourced: [{ label: 'Qualify (>=80%)', action: 'qualify' }],
+  qualified: [{ label: 'Contact on platform', action: 'platform-outreach' }],
+  'platform-contacted': [{ label: 'Convert to email/phone', action: 'convert-contact' }],
+  'contact-converted': [{ label: 'Direct outreach (email/phone)', action: 'direct-outreach' }],
+  'direct-contacted': [{ label: 'Invite online session', action: 'online-invite' }],
+  'online-invited': [
+    { label: 'Online: completed', action: 'online-outcome-completed' },
+    { label: 'Online: no-show', action: 'online-outcome-no-show' },
+  ],
+  'online-completed': [{ label: 'Invite in person', action: 'in-person-invite' }],
+  'online-no-show': [{ label: 'Re-invite online session', action: 'online-invite' }],
+  'in-person-invited': [
+    { label: 'In-person: completed', action: 'in-person-outcome-completed' },
+    { label: 'In-person: no-show', action: 'in-person-outcome-no-show' },
+  ],
+  'in-person-no-show': [{ label: 'Re-invite in person', action: 'in-person-invite' }],
+  'in-person-completed': [{ label: 'Submit for approval', action: 'submit-for-approval' }],
+  'pending-approval': [
+    { label: 'Approve', action: 'approve' },
+    { label: 'Reject', action: 'reject' },
+  ],
+  approved: [{ label: 'Send contract', action: 'send-contract' }],
+};
+
+async function runProspectAction(id, action) {
+  try {
+    switch (action) {
+      case 'qualify':
+        await apiFetch(`/outreach/prospects/${id}/qualify`, { method: 'POST' });
+        break;
+      case 'platform-outreach': {
+        const message = prompt('Message to send inside their own platform:');
+        if (message === null) return;
+        await apiFetch(`/outreach/prospects/${id}/platform-outreach`, {
+          method: 'POST',
+          body: JSON.stringify({ message }),
+        });
+        break;
+      }
+      case 'convert-contact': {
+        const email = prompt('Email (optional):') || undefined;
+        const phone = prompt('Phone (optional):') || undefined;
+        await apiFetch(`/outreach/prospects/${id}/convert-contact`, {
+          method: 'POST',
+          body: JSON.stringify({ email, phone }),
+        });
+        break;
+      }
+      case 'direct-outreach': {
+        const channel = prompt('Channel ("email" or "phone"):', 'email');
+        if (!channel) return;
+        const message = prompt('Direct message:');
+        if (message === null) return;
+        await apiFetch(`/outreach/prospects/${id}/direct-outreach`, {
+          method: 'POST',
+          body: JSON.stringify({ channel, message }),
+        });
+        break;
+      }
+      case 'online-invite': {
+        const dateStr = prompt('Online session date/time (e.g. 2026-01-01T10:00):');
+        if (!dateStr) return;
+        const script = prompt('Script for the call:');
+        if (script === null) return;
+        await apiFetch(`/outreach/prospects/${id}/online-session/invite`, {
+          method: 'POST',
+          body: JSON.stringify({ scheduledAt: new Date(dateStr).getTime(), script }),
+        });
+        break;
+      }
+      case 'online-outcome-completed':
+        await apiFetch(`/outreach/prospects/${id}/online-session/outcome`, {
+          method: 'POST',
+          body: JSON.stringify({ outcome: 'completed' }),
+        });
+        break;
+      case 'online-outcome-no-show':
+        await apiFetch(`/outreach/prospects/${id}/online-session/outcome`, {
+          method: 'POST',
+          body: JSON.stringify({ outcome: 'no-show' }),
+        });
+        break;
+      case 'in-person-invite': {
+        const locationId = prompt('Location id (salon/office):');
+        if (!locationId) return;
+        const dateStr = prompt('In-person visit date/time (controlled visiting hours):');
+        if (!dateStr) return;
+        await apiFetch(`/outreach/prospects/${id}/in-person/invite`, {
+          method: 'POST',
+          body: JSON.stringify({ locationId, scheduledAt: new Date(dateStr).getTime() }),
+        });
+        break;
+      }
+      case 'in-person-outcome-completed':
+        await apiFetch(`/outreach/prospects/${id}/in-person/outcome`, {
+          method: 'POST',
+          body: JSON.stringify({ outcome: 'completed' }),
+        });
+        break;
+      case 'in-person-outcome-no-show':
+        await apiFetch(`/outreach/prospects/${id}/in-person/outcome`, {
+          method: 'POST',
+          body: JSON.stringify({ outcome: 'no-show' }),
+        });
+        break;
+      case 'submit-for-approval': {
+        const responsibleContact = prompt('Responsible person (email/contact) to hand the list to:');
+        if (!responsibleContact) return;
+        await apiFetch(`/outreach/prospects/${id}/submit-for-approval`, {
+          method: 'POST',
+          body: JSON.stringify({ responsibleContact }),
+        });
+        break;
+      }
+      case 'approve':
+      case 'reject': {
+        const decidedBy = prompt('Decided by:');
+        if (!decidedBy) return;
+        await apiFetch(`/outreach/prospects/${id}/decide-approval`, {
+          method: 'POST',
+          body: JSON.stringify({ decision: action === 'approve' ? 'approved' : 'rejected', decidedBy }),
+        });
+        break;
+      }
+      case 'send-contract':
+        await apiFetch(`/outreach/prospects/${id}/send-contract`, { method: 'POST' });
+        break;
+      default:
+        break;
+    }
+    refreshProspects();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function refreshProspects() {
+  const container = document.getElementById('prospectsList');
+  try {
+    const { prospects } = await apiFetch('/outreach/prospects');
+    container.innerHTML = prospects.length
+      ? prospects
+          .map((p) => {
+            const actions = PROSPECT_ACTIONS[p.status] || [];
+            const buttons = actions
+              .map(
+                (a) =>
+                  `<button data-action="${a.action}" data-id="${p.id}">${a.label}</button>`
+              )
+              .join(' ');
+            return `<div class="card"><h4>${p.displayName || p.accountHandle} (${p.id})</h4><div>Platform: ${p.platform} (${p.accountHandle})</div><div>Plan: ${p.planId}${
+              p.audienceProfileId ? ` / Audience: ${p.audienceProfileId}` : ''
+            }</div><div>Match score: ${p.matchScore}%</div><div>Status: <strong>${p.status}</strong></div>${
+              p.email || p.phone ? `<div>Contact: ${p.email || ''} ${p.phone || ''}</div>` : ''
+            }<div>${buttons}</div></div>`;
+          })
+          .join('')
+      : '<p class="hint">No prospects sourced yet.</p>';
+    container.querySelectorAll('button[data-action]').forEach((btn) =>
+      btn.addEventListener('click', () => runProspectAction(btn.dataset.id, btn.dataset.action))
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupProspectForm() {
+  document.getElementById('prospectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pId').value || undefined;
+    const planId = document.getElementById('pPlanId').value;
+    const audienceProfileId = document.getElementById('pAudienceProfileId').value || undefined;
+    const platform = document.getElementById('pPlatform').value;
+    const accountHandle = document.getElementById('pAccountHandle').value;
+    const displayName = document.getElementById('pDisplayName').value || undefined;
+    const matchScore = Number(document.getElementById('pMatchScore').value);
+    try {
+      await apiFetch('/outreach/prospects', {
+        method: 'POST',
+        body: JSON.stringify({ id, planId, audienceProfileId, platform, accountHandle, displayName, matchScore }),
+      });
+      refreshProspects();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
@@ -443,9 +675,12 @@ setupAudienceProfileForm();
 setupCommissionModelForm();
 setupResumeForm();
 setupLandingPageForm();
+setupOutreachScriptForm();
+setupProspectForm();
 refreshConnections();
 refreshMarkets();
 refreshAudienceProfiles();
 refreshCommissionModels();
 refreshResumes();
 refreshLandingPages();
+refreshProspects();
