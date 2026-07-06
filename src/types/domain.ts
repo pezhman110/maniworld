@@ -691,3 +691,85 @@ export interface StaffAccount {
   createdAt: number;
   active: boolean;
 }
+
+/**
+ * Presentation & online-consultation campaign types.
+ *
+ * Covers the fully-independent "presentation session with online
+ * consultation" module: an admin-editable audience/target-text profile
+ * (e.g. influencer / company / group / bank), the goals that change
+ * with the audience, the commission/collaboration model tied to a
+ * vertical or profile, how a collaborator's resume/CV was sourced
+ * (Indeed, LinkedIn, or a manually supplied link), and a single-page
+ * landing site the admin can point at a custom domain with freely
+ * editable content blocks (words/sentences/addresses).
+ */
+
+/** A manager-editable audience/target segment: who the presentation is aimed at and why. */
+export interface AudienceProfile {
+  id: string;
+  /** Human label, e.g. "Influencers", "Banking sector", "Corporate group". */
+  label: string;
+  /** The text shown to this audience (changes per audience: "influencer" vs "company" vs "group" vs "bank"...). */
+  targetText: string;
+  /** Goals for this audience; changes together with the audience (e.g. banking → compliance-first goals). */
+  goals: string[];
+  vertical?: string;
+  createdAt: number;
+  active: boolean;
+}
+
+export type CommissionModelType = 'percentage' | 'flat' | 'tiered';
+
+export interface CommissionTier {
+  upToCount?: number;
+  rate: number;
+}
+
+/** A commission/collaboration model, optionally scoped to one audience profile or vertical (e.g. banking changes the whole plan). */
+export interface CommissionModel {
+  id: string;
+  label: string;
+  type: CommissionModelType;
+  /** Percentage (0-100) or flat amount, depending on `type`. Ignored when `type` is 'tiered'. */
+  rate?: number;
+  tiers?: CommissionTier[];
+  audienceProfileId?: string;
+  notes?: string;
+  createdAt: number;
+  active: boolean;
+}
+
+export type ResumeSource = 'indeed' | 'linkedin' | 'manual-link' | 'upload';
+
+/** Where a collaborator/candidate's resume/CV came from, manually recorded or linked. */
+export interface ResumeIntake {
+  id: string;
+  candidateName: string;
+  source: ResumeSource;
+  url?: string;
+  audienceProfileId?: string;
+  notes?: string;
+  createdAt: number;
+}
+
+/** A manually-added, free-form content block for a landing page (word, sentence, or address). */
+export interface LandingPageContentBlock {
+  label: string;
+  content: string;
+}
+
+/** A single-page site the admin can request at a chosen path/domain, tied to an audience profile. */
+export interface LandingPageSite {
+  id: string;
+  slug: string;
+  /** Optional custom domain this page should be served on once hosted, e.g. "consult.example.com". */
+  domain?: string;
+  audienceProfileId?: string;
+  heroText: string;
+  contentBlocks: LandingPageContentBlock[];
+  /** Field names the page's lead-capture form should collect, e.g. ["fullName", "phone", "company"]. */
+  leadFormFields: string[];
+  createdAt: number;
+  active: boolean;
+}

@@ -20,6 +20,7 @@
   <nav>
     <button class="tab-btn active" data-tab="connections">Connections</button>
     <button class="tab-btn" data-tab="markets">Markets</button>
+    <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
   </nav>
 
   <main>
@@ -60,6 +61,77 @@
         <label>Min/day <input id="marketMin" type="number" min="0" value="10" required /></label>
         <label>Max/day (optional) <input id="marketMax" type="number" min="0" /></label>
         <button type="submit">Add market</button>
+      </form>
+    </section>
+    <section id="tab-presentation" class="tab">
+      <h2>Presentation Campaigns</h2>
+      <p class="hint">
+        One page for the whole "presentation session with online consultation" module: pick the
+        audience (its target text and goals change together — e.g. switch from influencer to
+        banking sector), set the commission/collaboration model for that audience, record how a
+        candidate's resume was sourced, and build the single-page site (slug/domain + manually
+        added words/sentences/addresses) that collects leads for it.
+      </p>
+
+      <h3>Audience profiles</h3>
+      <div id="audienceProfilesList" class="cards"></div>
+      <form id="audienceProfileForm">
+        <label>Id <input id="apId" type="text" placeholder="e.g. banking" required /></label>
+        <label>Label <input id="apLabel" type="text" placeholder="e.g. Banking sector" required /></label>
+        <label>Vertical (optional) <input id="apVertical" type="text" placeholder="e.g. banking" /></label>
+        <label>Target text <textarea id="apTargetText" placeholder="Message shown to this audience" required></textarea></label>
+        <label>Goals (comma separated) <input id="apGoals" type="text" placeholder="sign-corporate-contract, compliance-review" required /></label>
+        <button type="submit">Save audience profile</button>
+      </form>
+
+      <h3>Commission / collaboration models</h3>
+      <div id="commissionModelsList" class="cards"></div>
+      <form id="commissionModelForm">
+        <label>Id <input id="cmId" type="text" placeholder="e.g. banking-tiered" required /></label>
+        <label>Label <input id="cmLabel" type="text" placeholder="e.g. Banking tiered plan" required /></label>
+        <label>Type
+          <select id="cmType">
+            <option value="percentage">percentage</option>
+            <option value="flat">flat</option>
+            <option value="tiered">tiered</option>
+          </select>
+        </label>
+        <label>Rate (for percentage/flat) <input id="cmRate" type="number" min="0" step="0.01" /></label>
+        <label>Tiers (for tiered, e.g. "10:5, :8") <input id="cmTiers" type="text" placeholder="upToCount:rate, :rate" /></label>
+        <label>Audience profile id (optional) <input id="cmAudienceProfileId" type="text" placeholder="e.g. banking" /></label>
+        <button type="submit">Save commission model</button>
+      </form>
+
+      <h3>Resume intake (Indeed / LinkedIn / manual)</h3>
+      <div id="resumesList" class="cards"></div>
+      <form id="resumeForm">
+        <label>Candidate name <input id="resCandidateName" type="text" required /></label>
+        <label>Source
+          <select id="resSource">
+            <option value="indeed">indeed</option>
+            <option value="linkedin">linkedin</option>
+            <option value="manual-link">manual-link</option>
+            <option value="upload">upload</option>
+          </select>
+        </label>
+        <label>URL (for indeed/linkedin/manual-link) <input id="resUrl" type="text" placeholder="https://..." /></label>
+        <label>Audience profile id (optional) <input id="resAudienceProfileId" type="text" /></label>
+        <button type="submit">Save resume</button>
+      </form>
+
+      <h3>Landing pages (single-page sites)</h3>
+      <div id="landingPagesList" class="cards"></div>
+      <form id="landingPageForm">
+        <label>Id <input id="lpId" type="text" placeholder="e.g. bank-page" required /></label>
+        <label>Slug <input id="lpSlug" type="text" placeholder="e.g. bank-consult" required /></label>
+        <label>Custom domain (optional) <input id="lpDomain" type="text" placeholder="e.g. consult.example.com" /></label>
+        <label>Audience profile id (optional) <input id="lpAudienceProfileId" type="text" /></label>
+        <label>Hero text <textarea id="lpHeroText" required></textarea></label>
+        <label>Content blocks (label:content per line — words/sentences/addresses)
+          <textarea id="lpContentBlocks" placeholder="address: Tehran, Valiasr St.&#10;phone: +98 21 0000 0000"></textarea>
+        </label>
+        <label>Lead form fields (comma separated) <input id="lpLeadFormFields" type="text" placeholder="fullName, phone, company" /></label>
+        <button type="submit">Save landing page</button>
       </form>
     </section>
   </main>

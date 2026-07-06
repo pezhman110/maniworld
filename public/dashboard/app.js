@@ -47,6 +47,11 @@ function setupApiKeyBar() {
     adminApiKey = input.value;
     status.textContent = 'Saved for this session.';
     refreshConnections();
+    refreshMarkets();
+    refreshAudienceProfiles();
+    refreshCommissionModels();
+    refreshResumes();
+    refreshLandingPages();
     setTimeout(() => (status.textContent = ''), 2000);
   });
 }
@@ -211,10 +216,236 @@ function setupMarketForm() {
   });
 }
 
+async function refreshAudienceProfiles() {
+  const container = document.getElementById('audienceProfilesList');
+  try {
+    const { audienceProfiles } = await apiFetch('/presentation/audience-profiles?onlyActive=false');
+    container.innerHTML = audienceProfiles.length
+      ? audienceProfiles
+          .map(
+            (p) =>
+              `<div class="card"><h4>${p.label} (${p.id})</h4><div>${p.targetText}</div><div>Goals: ${p.goals.join(', ')}</div>${
+                p.vertical ? `<div>Vertical: ${p.vertical}</div>` : ''
+              }<div><button data-action="remove-ap" data-id="${p.id}">Remove</button></div></div>`
+          )
+          .join('')
+      : '<p class="hint">No audience profiles yet.</p>';
+    container.querySelectorAll('button[data-action="remove-ap"]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        await apiFetch(`/presentation/audience-profiles/${btn.dataset.id}`, { method: 'DELETE' });
+        refreshAudienceProfiles();
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupAudienceProfileForm() {
+  document.getElementById('audienceProfileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('apId').value;
+    const label = document.getElementById('apLabel').value;
+    const vertical = document.getElementById('apVertical').value || undefined;
+    const targetText = document.getElementById('apTargetText').value;
+    const goals = document
+      .getElementById('apGoals')
+      .value.split(',')
+      .map((g) => g.trim())
+      .filter(Boolean);
+    try {
+      await apiFetch('/presentation/audience-profiles', {
+        method: 'POST',
+        body: JSON.stringify({ id, label, vertical, targetText, goals }),
+      });
+      refreshAudienceProfiles();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshCommissionModels() {
+  const container = document.getElementById('commissionModelsList');
+  try {
+    const { commissionModels } = await apiFetch('/presentation/commission-models?onlyActive=false');
+    container.innerHTML = commissionModels.length
+      ? commissionModels
+          .map((m) => {
+            const detail =
+              m.type === 'tiered'
+                ? (m.tiers || []).map((t) => `${t.upToCount ?? '∞'}:${t.rate}`).join(', ')
+                : `${m.rate}${m.type === 'percentage' ? '%' : ''}`;
+            return `<div class="card"><h4>${m.label} (${m.id})</h4><div>${m.type}: ${detail}</div>${
+              m.audienceProfileId ? `<div>Audience: ${m.audienceProfileId}</div>` : ''
+            }<div><button data-action="remove-cm" data-id="${m.id}">Remove</button></div></div>`;
+          })
+          .join('')
+      : '<p class="hint">No commission models yet.</p>';
+    container.querySelectorAll('button[data-action="remove-cm"]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        await apiFetch(`/presentation/commission-models/${btn.dataset.id}`, { method: 'DELETE' });
+        refreshCommissionModels();
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function parseTiers(raw) {
+  return raw
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [upTo, rate] = part.split(':').map((s) => s.trim());
+      return { upToCount: upTo ? Number(upTo) : undefined, rate: Number(rate) };
+    });
+}
+
+function setupCommissionModelForm() {
+  document.getElementById('commissionModelForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('cmId').value;
+    const label = document.getElementById('cmLabel').value;
+    const type = document.getElementById('cmType').value;
+    const rateRaw = document.getElementById('cmRate').value;
+    const rate = rateRaw ? Number(rateRaw) : undefined;
+    const tiersRaw = document.getElementById('cmTiers').value;
+    const tiers = type === 'tiered' && tiersRaw ? parseTiers(tiersRaw) : undefined;
+    const audienceProfileId = document.getElementById('cmAudienceProfileId').value || undefined;
+    try {
+      await apiFetch('/presentation/commission-models', {
+        method: 'POST',
+        body: JSON.stringify({ id, label, type, rate, tiers, audienceProfileId }),
+      });
+      refreshCommissionModels();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshResumes() {
+  const container = document.getElementById('resumesList');
+  try {
+    const { resumes } = await apiFetch('/presentation/resumes');
+    container.innerHTML = resumes.length
+      ? resumes
+          .map(
+            (r) =>
+              `<div class="card"><h4>${r.candidateName}</h4><div>${r.source}${r.url ? ': ' + r.url : ''}</div><div><button data-action="remove-res" data-id="${r.id}">Remove</button></div></div>`
+          )
+          .join('')
+      : '<p class="hint">No resumes recorded yet.</p>';
+    container.querySelectorAll('button[data-action="remove-res"]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        await apiFetch(`/presentation/resumes/${btn.dataset.id}`, { method: 'DELETE' });
+        refreshResumes();
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupResumeForm() {
+  document.getElementById('resumeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const candidateName = document.getElementById('resCandidateName').value;
+    const source = document.getElementById('resSource').value;
+    const url = document.getElementById('resUrl').value || undefined;
+    const audienceProfileId = document.getElementById('resAudienceProfileId').value || undefined;
+    try {
+      await apiFetch('/presentation/resumes', {
+        method: 'POST',
+        body: JSON.stringify({ candidateName, source, url, audienceProfileId }),
+      });
+      refreshResumes();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function parseContentBlocks(raw) {
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const idx = line.indexOf(':');
+      if (idx === -1) return { label: line, content: line };
+      return { label: line.slice(0, idx).trim(), content: line.slice(idx + 1).trim() };
+    });
+}
+
+async function refreshLandingPages() {
+  const container = document.getElementById('landingPagesList');
+  try {
+    const { landingPages } = await apiFetch('/presentation/landing-pages?onlyActive=false');
+    container.innerHTML = landingPages.length
+      ? landingPages
+          .map(
+            (p) =>
+              `<div class="card"><h4>${p.slug} (${p.id})</h4>${p.domain ? `<div>Domain: ${p.domain}</div>` : ''}<div>${p.heroText}</div><div>Blocks: ${p.contentBlocks
+                .map((b) => `${b.label}=${b.content}`)
+                .join('; ')}</div><div><button data-action="remove-lp" data-id="${p.id}">Remove</button></div></div>`
+          )
+          .join('')
+      : '<p class="hint">No landing pages yet.</p>';
+    container.querySelectorAll('button[data-action="remove-lp"]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        await apiFetch(`/presentation/landing-pages/${btn.dataset.id}`, { method: 'DELETE' });
+        refreshLandingPages();
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupLandingPageForm() {
+  document.getElementById('landingPageForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('lpId').value;
+    const slug = document.getElementById('lpSlug').value;
+    const domain = document.getElementById('lpDomain').value || undefined;
+    const audienceProfileId = document.getElementById('lpAudienceProfileId').value || undefined;
+    const heroText = document.getElementById('lpHeroText').value;
+    const contentBlocks = parseContentBlocks(document.getElementById('lpContentBlocks').value);
+    const leadFormFieldsRaw = document.getElementById('lpLeadFormFields').value;
+    const leadFormFields = leadFormFieldsRaw
+      ? leadFormFieldsRaw
+          .split(',')
+          .map((f) => f.trim())
+          .filter(Boolean)
+      : undefined;
+    try {
+      await apiFetch('/presentation/landing-pages', {
+        method: 'POST',
+        body: JSON.stringify({ id, slug, domain, audienceProfileId, heroText, contentBlocks, leadFormFields }),
+      });
+      refreshLandingPages();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
 setupConnectionForm();
 setupMarketForm();
+setupAudienceProfileForm();
+setupCommissionModelForm();
+setupResumeForm();
+setupLandingPageForm();
 refreshConnections();
 refreshMarkets();
+refreshAudienceProfiles();
+refreshCommissionModels();
+refreshResumes();
+refreshLandingPages();
