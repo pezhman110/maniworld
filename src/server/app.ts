@@ -10,6 +10,8 @@ import {
 } from '../modules/presentationCampaigns';
 import { OutreachProspectRegistry, OutreachScriptRegistry } from '../modules/prospectOutreach';
 import { DutyScopeRegistry } from '../modules/dutyScope';
+import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../modules/contentStudio';
+import { createSocialPublisher, SocialPublisher } from '../modules/socialPublisher';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { createCredentialsRouter } from './routes/credentialsRouter';
@@ -17,6 +19,7 @@ import { createMarketsRouter } from './routes/marketsRouter';
 import { createPresentationRouter } from './routes/presentationRouter';
 import { createProspectOutreachRouter } from './routes/prospectOutreachRouter';
 import { createDutyScopeRouter } from './routes/dutyScopeRouter';
+import { createContentStudioRouter } from './routes/contentStudioRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -28,6 +31,10 @@ export interface CreateAppOptions {
   prospects?: OutreachProspectRegistry;
   outreachScripts?: OutreachScriptRegistry;
   dutyScopes?: DutyScopeRegistry;
+  contentBriefs?: ContentBriefRegistry;
+  contentPlans?: ContentPlanRegistry;
+  contentTrends?: TrendResearchRegistry;
+  publishContent?: SocialPublisher;
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
   adminApiKey?: string;
@@ -50,6 +57,10 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const prospects = options.prospects ?? new OutreachProspectRegistry();
   const outreachScripts = options.outreachScripts ?? new OutreachScriptRegistry();
   const dutyScopes = options.dutyScopes ?? new DutyScopeRegistry();
+  const contentBriefs = options.contentBriefs ?? new ContentBriefRegistry();
+  const contentPlans = options.contentPlans ?? new ContentPlanRegistry();
+  const contentTrends = options.contentTrends ?? new TrendResearchRegistry();
+  const publishContent = options.publishContent ?? createSocialPublisher();
   const testConnection = options.testConnection ?? createConnectionTester();
 
   const app = express();
@@ -67,6 +78,17 @@ export function createApp(options: CreateAppOptions = {}): Express {
   );
   app.use('/api/outreach', auth, createProspectOutreachRouter({ prospects, scripts: outreachScripts }));
   app.use('/api/duty-scope', auth, createDutyScopeRouter({ dutyScopes, prospects }));
+  app.use(
+    '/api/content-studio',
+    auth,
+    createContentStudioRouter({
+      briefs: contentBriefs,
+      plans: contentPlans,
+      trends: contentTrends,
+      credentials: credentialsStore,
+      publish: publishContent,
+    })
+  );
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));

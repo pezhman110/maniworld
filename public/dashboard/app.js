@@ -8,6 +8,11 @@ const PROVIDER_FIELDS = {
   zoom: ['accountId', 'clientId', 'clientSecret'],
   'google-meet': ['joinUrl'],
   apollo: ['apiKey'],
+  instagram: ['igUserId', 'accessToken'],
+  facebook: ['pageId', 'accessToken'],
+  linkedin: ['accessToken', 'authorUrn'],
+  tiktok: ['accessToken'],
+  snapchat: [],
 };
 
 // Kept only in memory (not localStorage/sessionStorage) so the admin API key
@@ -55,6 +60,8 @@ function setupApiKeyBar() {
     refreshProspects();
     refreshDutyScopes();
     refreshPipelineOverview();
+    refreshContentBriefs();
+    refreshContentFallbackQueue();
     setTimeout(() => (status.textContent = ''), 2000);
   });
 }
@@ -998,6 +1005,182 @@ function setupPipelineTrackForm() {
   });
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function setupTrendForm() {
+  document.getElementById('trendForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const platform = document.getElementById('trendPlatform').value;
+    const keyword = document.getElementById('trendKeyword').value;
+    const source = document.getElementById('trendSource').value;
+    try {
+      await apiFetch('/content-studio/trends', {
+        method: 'POST',
+        body: JSON.stringify({ platform, keyword, source }),
+      });
+      document.getElementById('trendKeyword').value = '';
+      document.getElementById('trendSource').value = '';
+      refreshTrends(platform);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshTrends(platform) {
+  const container = document.getElementById('trendsList');
+  try {
+    const { trends } = await apiFetch(`/content-studio/trends?platform=${encodeURIComponent(platform)}`);
+    container.innerHTML = trends.length
+      ? trends
+          .map((t) => `<div class="card"><h4>${escapeHtml(t.keyword)}</h4><div>${escapeHtml(t.platform)} — ${escapeHtml(t.source)}</div></div>`)
+          .join('')
+      : `<p class="hint">No trends recorded yet for ${escapeHtml(platform)}.</p>`;
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupContentBriefForm() {
+  document.getElementById('contentBriefForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('cbId').value || undefined;
+    const platform = document.getElementById('cbPlatform').value;
+    const accountKind = document.getElementById('cbAccountKind').value;
+    const topic = document.getElementById('cbTopic').value;
+    const referenceStyle = document.getElementById('cbReferenceStyle').value || undefined;
+    const trendKeywords = document
+      .getElementById('cbTrendKeywords')
+      .value.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    try {
+      const { brief } = await apiFetch('/content-studio/briefs', {
+        method: 'POST',
+        body: JSON.stringify({ id, platform, accountKind, topic, referenceStyle, trendKeywords }),
+      });
+      document.getElementById('cpBriefId').value = brief.id;
+      refreshContentBriefs();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshContentBriefs() {
+  const container = document.getElementById('contentBriefsList');
+  try {
+    const { briefs } = await apiFetch('/content-studio/briefs');
+    container.innerHTML = briefs.length
+      ? briefs
+          .map(
+            (b) =>
+              `<div class="card"><h4>${escapeHtml(b.id)}</h4><div>${escapeHtml(b.platform)} / ${escapeHtml(
+                b.accountKind
+              )}</div><div>Bio: ${escapeHtml(b.bio)}</div><div>Description: ${escapeHtml(
+                b.description
+              )}</div><div><button data-view-items="${b.id}">View content plan</button></div></div>`
+          )
+          .join('')
+      : '<p class="hint">No content briefs yet.</p>';
+    container.querySelectorAll('button[data-view-items]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        document.getElementById('cpBriefId').value = btn.dataset.viewItems;
+        refreshContentItems(btn.dataset.viewItems);
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupContentPlanForm() {
+  document.getElementById('contentPlanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const briefId = document.getElementById('cpBriefId').value;
+    const count = Number(document.getElementById('cpCount').value) || 9;
+    try {
+      await apiFetch(`/content-studio/briefs/${briefId}/plan`, {
+        method: 'POST',
+        body: JSON.stringify({ count }),
+      });
+      refreshContentItems(briefId);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function renderDestination(itemId, d) {
+  const statusClass = d.status === 'published' ? 'connected' : d.status === 'manual-fallback' ? 'invalid' : 'unverified';
+  return `<div>${escapeHtml(d.channel)}: <strong class="status ${statusClass}">${escapeHtml(d.status)}</strong>${
+    d.failureReason ? ` — ${escapeHtml(d.failureReason)}` : ''
+  } <button data-publish-item="${itemId}" data-publish-channel="${d.channel}">Publish</button></div>`;
+}
+
+async function refreshContentItems(briefId) {
+  const container = document.getElementById('contentItemsList');
+  if (!briefId) {
+    container.innerHTML = '';
+    return;
+  }
+  try {
+    const { items } = await apiFetch(`/content-studio/briefs/${briefId}/items`);
+    container.innerHTML = items.length
+      ? items
+          .map(
+            (i) =>
+              `<div class="card"><h4>#${i.index + 1} — ${escapeHtml(i.type)}</h4><div>${escapeHtml(
+                i.caption
+              )}</div><div class="hint">${escapeHtml(i.mediaBrief)}</div>${i.destinations
+                .map((d) => renderDestination(i.id, d))
+                .join('')}</div>`
+          )
+          .join('')
+      : '<p class="hint">No content plan generated yet for this brief.</p>';
+    container.querySelectorAll('button[data-publish-item]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(
+            `/content-studio/items/${btn.dataset.publishItem}/publish/${btn.dataset.publishChannel}`,
+            { method: 'POST' }
+          );
+          refreshContentItems(briefId);
+          refreshContentFallbackQueue();
+        } catch (err) {
+          alert(err.message);
+        }
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+async function refreshContentFallbackQueue() {
+  const container = document.getElementById('contentFallbackQueue');
+  try {
+    const { items } = await apiFetch('/content-studio/fallback-queue');
+    container.innerHTML = items.length
+      ? items
+          .map(
+            (i) =>
+              `<div class="card"><h4>${escapeHtml(i.id)} — ${escapeHtml(i.type)}</h4><div>${escapeHtml(
+                i.caption
+              )}</div>${i.destinations
+                .filter((d) => d.status === 'manual-fallback')
+                .map((d) => `<div>${escapeHtml(d.channel)}: ${escapeHtml(d.failureReason || '')}</div>`)
+                .join('')}</div>`
+          )
+          .join('')
+      : '<p class="hint">Nothing waiting for manual posting.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
@@ -1013,6 +1196,9 @@ setupDutyScopeForm();
 setupDutyQuotaReadingForm();
 setupDutyComplianceForm();
 setupPipelineTrackForm();
+setupTrendForm();
+setupContentBriefForm();
+setupContentPlanForm();
 refreshConnections();
 refreshMarkets();
 refreshAudienceProfiles();
@@ -1022,3 +1208,5 @@ refreshLandingPages();
 refreshProspects();
 refreshDutyScopes();
 refreshPipelineOverview();
+refreshContentBriefs();
+refreshContentFallbackQueue();

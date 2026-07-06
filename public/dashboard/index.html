@@ -24,6 +24,7 @@
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
     <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
+    <button class="tab-btn" data-tab="content-studio">Content Studio</button>
   </nav>
 
   <main>
@@ -255,6 +256,72 @@
         <button type="submit">Check compliance</button>
       </form>
       <div id="dutyComplianceList" class="cards"></div>
+    </section>
+
+    <section id="tab-content-studio" class="tab">
+      <h2>Content Studio</h2>
+      <p class="hint">
+        Bio/description generation, a plan of content (default 9 posts, cycling through
+        post/carousel/single-banner/video/audio/text), and per-item publishing — for accounts you already own and
+        have created legitimately. Publishing uses each platform's official API; when a connection can't be
+        reached (missing credentials, an API failure, or a platform like Snapchat with no public content API),
+        the item is routed to the manual-fallback queue below instead of failing silently.
+      </p>
+
+      <h3>Record a trend note</h3>
+      <form id="trendForm">
+        <label>Platform
+          <select id="trendPlatform">
+            <option value="instagram">instagram</option>
+            <option value="tiktok">tiktok</option>
+            <option value="linkedin">linkedin</option>
+            <option value="facebook">facebook</option>
+            <option value="snapchat">snapchat</option>
+          </select>
+        </label>
+        <label>Keyword/trend <input id="trendKeyword" type="text" placeholder="e.g. glass skin" required /></label>
+        <label>Source <input id="trendSource" type="text" placeholder="e.g. Instagram Explore" required /></label>
+        <button type="submit">Record trend</button>
+      </form>
+      <div id="trendsList" class="cards"></div>
+
+      <h3>Create a content brief</h3>
+      <form id="contentBriefForm">
+        <label>Id (optional) <input id="cbId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Platform
+          <select id="cbPlatform">
+            <option value="instagram">instagram</option>
+            <option value="tiktok">tiktok</option>
+            <option value="linkedin">linkedin</option>
+            <option value="facebook">facebook</option>
+            <option value="snapchat">snapchat</option>
+          </select>
+        </label>
+        <label>Account type
+          <select id="cbAccountKind">
+            <option value="company">company</option>
+            <option value="personal">personal</option>
+          </select>
+        </label>
+        <label>Topic <input id="cbTopic" type="text" placeholder="e.g. salon services in Dubai" required /></label>
+        <label>Reference style (optional) <input id="cbReferenceStyle" type="text" placeholder="a page/style to draw inspiration from" /></label>
+        <label>Trend keywords (comma separated, optional) <input id="cbTrendKeywords" type="text" /></label>
+        <button type="submit">Create brief</button>
+      </form>
+
+      <h3>Briefs</h3>
+      <div id="contentBriefsList" class="cards"></div>
+
+      <h3>Generate a content plan</h3>
+      <form id="contentPlanForm">
+        <label>Brief id <input id="cpBriefId" type="text" placeholder="e.g. brief-1" required /></label>
+        <label># of items <input id="cpCount" type="number" min="1" value="9" required /></label>
+        <button type="submit">Generate plan</button>
+      </form>
+      <div id="contentItemsList" class="cards"></div>
+
+      <h3>Manual-fallback queue (couldn't connect / no public API — post these by hand)</h3>
+      <div id="contentFallbackQueue" class="cards"></div>
     </section>
   </main>
 

@@ -24,7 +24,12 @@ export type IntegrationProvider =
   | 'vapi'
   | 'zoom'
   | 'google-meet'
-  | 'apollo';
+  | 'apollo'
+  | 'instagram'
+  | 'facebook'
+  | 'linkedin'
+  | 'tiktok'
+  | 'snapchat';
 
 export type IntegrationConnectionStatus = 'connected' | 'unverified' | 'invalid';
 

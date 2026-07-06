@@ -946,3 +946,65 @@ export interface WeeklyComplianceReport {
   compliant: boolean;
   deficit: number;
 }
+
+/**
+ * Social platforms the content studio can target. Only platforms that
+ * expose an official content-publishing API for owned business/creator
+ * accounts are supported for automated publishing; Snapchat has no public
+ * API for organic content and is always routed to the manual-fallback
+ * queue (see `SocialPublisher`).
+ */
+export type ContentPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'snapchat';
+
+export type ContentAccountKind = 'personal' | 'company';
+
+/** The kind of content asset a plan item represents. */
+export type ContentType = 'post' | 'carousel' | 'single-banner' | 'video' | 'audio' | 'text';
+
+/** A brief describing what an account/topic's content plan should look like. */
+export interface ContentBrief {
+  id: string;
+  platform: ContentPlatform;
+  accountKind: ContentAccountKind;
+  /** Topic/industry the content should cover, e.g. "salon services in Dubai". */
+  topic: string;
+  /** Optional reference account/style to draw inspiration from (style only, not copied verbatim). */
+  referenceStyle?: string;
+  /** Optional trend keywords supplied by the requester or pulled from `TrendResearchRegistry`. */
+  trendKeywords: string[];
+  bio: string;
+  description: string;
+  createdAt: number;
+}
+
+/** A single recorded trend note used to steer content generation. */
+export interface TrendNote {
+  id: string;
+  platform: ContentPlatform;
+  keyword: string;
+  source: string;
+  recordedAt: number;
+}
+
+export type ContentItemStatus = 'draft' | 'published' | 'publish-failed' | 'manual-fallback';
+
+/** One publish destination for a content item (a social platform, or the company website). */
+export interface ContentDestination {
+  channel: ContentPlatform | 'website';
+  status: ContentItemStatus;
+  failureReason?: string;
+  publishedAt?: number;
+}
+
+/** A single item in a generated content plan (one of the default 9 posts, a banner, a video, etc.). */
+export interface ContentItem {
+  id: string;
+  briefId: string;
+  index: number;
+  type: ContentType;
+  caption: string;
+  /** Human-readable brief for the asset itself (what the video/audio/banner should show), not the real media file. */
+  mediaBrief: string;
+  destinations: ContentDestination[];
+  createdAt: number;
+}
