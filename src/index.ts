@@ -35,3 +35,6 @@ export * from './modules/integrationClients/twilioClient';
 export * from './modules/integrationClients/messageSender';
 export * from './modules/integrationClients/videoSessionProvider';
 export * from './modules/integrationClients/apolloClient';
+export * from './modules/freelancerRecruitment';
+export * from './modules/salonCapacity';
+export * from './modules/freelancerContracts';

@@ -526,3 +526,168 @@ export interface ChannelRegistryEntry {
   active: boolean;
   createdAt: number;
 }
+
+// ---------------------------------------------------------------------------
+// Freelancer recruitment & placement module
+// ---------------------------------------------------------------------------
+
+/**
+ * A sales-manager-authored recruitment scheme for sourcing freelancers into
+ * one market/service line. It carries the commission split the freelancer
+ * will be contracted on: a direct percentage on their own clients' revenue,
+ * and a percentage on any *other* salon service their client buys while
+ * visiting for the freelancer's own line.
+ */
+export interface RecruitmentPlan {
+  id: string;
+  market: MarketType;
+  line: string;
+  createdBy: string;
+  /** % of revenue from the freelancer's own clients that goes to the salon. */
+  directCommissionPercent: number;
+  /** % of revenue the salon keeps when the freelancer's client buys another salon service. */
+  otherServicesCommissionPercent: number;
+  /** Salons this plan is allowed to place freelancers into. */
+  targetLocationIds: string[];
+  active: boolean;
+  notes?: string;
+  createdAt: number;
+}
+
+export type JobBoard = 'indeed' | 'linkedin';
+
+/** A job ad posted to an external job board for a recruitment plan. */
+export interface FreelancerJobPosting {
+  id: string;
+  board: JobBoard;
+  planId: string;
+  title: string;
+  url?: string;
+  postedAt: number;
+  active: boolean;
+}
+
+export type FreelancerSourceChannel = 'indeed' | 'linkedin' | 'manual-list' | 'referral' | 'inbound';
+
+export type FreelancerStatus =
+  | 'sourced'
+  | 'applied'
+  | 'screening'
+  | 'interview-scheduled'
+  | 'interviewed'
+  | 'passed'
+  | 'failed'
+  | 'contract-offered'
+  | 'hired'
+  | 'rejected'
+  | 'active-account';
+
+/** One weekly recurring free-time window a freelancer says they can work (0 Sunday .. 6 Saturday). */
+export interface FreelancerAvailabilitySlot {
+  weekday: number;
+  startHour: number;
+  endHour: number;
+}
+
+/** A freelancer candidate/hire, tracked from sourcing through to an active salon account. */
+export interface Freelancer {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  /** Service line specialty, e.g. "nails", "hair" (matches ServiceLine.name). */
+  line: string;
+  source: FreelancerSourceChannel;
+  resumeUrl?: string;
+  resumeSummary?: string;
+  /** Existing client count the freelancer says they can bring, used for capacity planning. */
+  clientCount?: number;
+  availability: FreelancerAvailabilitySlot[];
+  status: FreelancerStatus;
+  createdAt: number;
+  notes?: string;
+}
+
+/** Per-salon-per-line service capacity, so the system can compute daily client throughput. */
+export interface SalonLineCapacity {
+  locationId: string;
+  line: string;
+  /** Minutes required to serve one client on this line (e.g. 120 for a nail "call"/appointment). */
+  minutesPerClient: number;
+  /** How many freelancers/chairs can run this line in parallel at this salon. */
+  parallelSlots: number;
+}
+
+/** One allocated day for a freelancer at a specific salon, computed from availability + capacity. */
+export interface FreelancerScheduleAllocation {
+  locationId: string;
+  weekday: number;
+  startHour: number;
+  endHour: number;
+  clientsServed: number;
+}
+
+/** A weekly placement plan covering a freelancer's full client load across one or more salons. */
+export interface FreelancerCapacityPlan {
+  freelancerId: string;
+  clientCount: number;
+  allocations: FreelancerScheduleAllocation[];
+  /** True when the allocations' total weekly client capacity covers `clientCount`. */
+  fullyCovered: boolean;
+  /** Remaining clients per week that could not be scheduled with current availability/capacity. */
+  uncoveredClientCount: number;
+}
+
+export type InterviewOutcome = 'pending' | 'passed' | 'failed';
+
+/** An in-salon (or online) interview outcome, recorded from the salon's own dashboard. */
+export interface FreelancerInterviewRecord {
+  freelancerId: string;
+  locationId: string;
+  scheduledAt: number;
+  outcome: InterviewOutcome;
+  recordedBy?: string;
+  notes?: string;
+}
+
+export type HireDecision = 'hired' | 'rejected';
+
+/** Final hire/reject decision, handed off to HR once recorded. */
+export interface HireDecisionRecord {
+  freelancerId: string;
+  decision: HireDecision;
+  decidedBy: string;
+  decidedAt: number;
+  offerLetterText?: string;
+}
+
+/** A signed commission contract for a hired freelancer, derived from a RecruitmentPlan. */
+export interface FreelancerContract {
+  id: string;
+  freelancerId: string;
+  planId: string;
+  directCommissionPercent: number;
+  otherServicesCommissionPercent: number;
+  signedAt: number;
+  active: boolean;
+}
+
+/** A notification to be sent as part of the hire/onboarding handoff (HR, manager, freelancer, salon). */
+export interface HireNotification {
+  recipientRole: 'hr' | 'sales-manager' | 'freelancer' | 'salon';
+  recipientContact: string;
+  subject: string;
+  body: string;
+}
+
+/** The freelancer's converted, active resource account once hired and onboarded. */
+export interface StaffAccount {
+  id: string;
+  freelancerId: string;
+  fullName: string;
+  line: string;
+  market: MarketType;
+  contractId: string;
+  createdAt: number;
+  active: boolean;
+}
