@@ -666,6 +666,109 @@ function setupProspectForm() {
   });
 }
 
+async function refreshDutyScopes() {
+  const container = document.getElementById('dutyScopesList');
+  try {
+    const { dutyScopes } = await apiFetch('/duty-scope');
+    container.innerHTML = dutyScopes.length
+      ? dutyScopes
+          .map(
+            (d) =>
+              `<div class="card"><h4>${d.id}</h4><div>Prospect: ${d.prospectId}${
+                d.locationId ? ` @ ${d.locationId}` : ''
+              }</div><div>${d.visitsPerPeriod} visit(s) / ${d.period}</div><div>Services: ${
+                d.servicesCovered.join(', ') || '-'
+              }</div>${d.commissionPercent !== undefined ? `<div>Commission: ${d.commissionPercent}%</div>` : ''}<div>Status: <strong>${
+                d.active ? 'active' : 'inactive'
+              }</strong></div><div><button data-checkin="${d.id}">Log check-in (now)</button> ${
+                d.active ? `<button data-deactivate="${d.id}">Deactivate</button>` : ''
+              }</div></div>`
+          )
+          .join('')
+      : '<p class="hint">No duty scopes defined yet.</p>';
+    container.querySelectorAll('button[data-checkin]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/duty-scope/${btn.dataset.checkin}/check-in`, {
+            method: 'POST',
+            body: JSON.stringify({ checkedInAt: Date.now() }),
+          });
+          refreshDutyScopes();
+        } catch (err) {
+          alert(err.message);
+        }
+      })
+    );
+    container.querySelectorAll('button[data-deactivate]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/duty-scope/${btn.dataset.deactivate}/deactivate`, { method: 'POST' });
+          refreshDutyScopes();
+        } catch (err) {
+          alert(err.message);
+        }
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupDutyScopeForm() {
+  document.getElementById('dutyScopeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('dsId').value || undefined;
+    const prospectId = document.getElementById('dsProspectId').value;
+    const locationId = document.getElementById('dsLocationId').value || undefined;
+    const visitsPerPeriod = Number(document.getElementById('dsVisitsPerPeriod').value);
+    const period = document.getElementById('dsPeriod').value;
+    const servicesCovered = document
+      .getElementById('dsServicesCovered')
+      .value.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const commissionPercentRaw = document.getElementById('dsCommissionPercent').value;
+    const commissionPercent = commissionPercentRaw ? Number(commissionPercentRaw) : undefined;
+    try {
+      await apiFetch('/duty-scope', {
+        method: 'POST',
+        body: JSON.stringify({ id, prospectId, locationId, visitsPerPeriod, period, servicesCovered, commissionPercent }),
+      });
+      refreshDutyScopes();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function setupDutyComplianceForm() {
+  document.getElementById('dutyComplianceForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const weekStartDate = document.getElementById('dsWeekStart').value;
+    if (!weekStartDate) return;
+    const weekStart = new Date(`${weekStartDate}T00:00:00`).getTime();
+    const nonCompliantOnly = document.getElementById('dsNonCompliantOnly').checked;
+    const container = document.getElementById('dutyComplianceList');
+    try {
+      const { compliance } = await apiFetch(
+        `/duty-scope/compliance?weekStart=${weekStart}${nonCompliantOnly ? '&nonCompliantOnly=true' : ''}`
+      );
+      container.innerHTML = compliance.length
+        ? compliance
+            .map(
+              (c) =>
+                `<div class="card"><h4>${c.dutyScopeId}</h4><div>Prospect: ${c.prospectId}</div><div>Expected: ${c.expectedVisits} / Actual: ${c.actualVisits}</div><div>Status: <strong>${
+                  c.compliant ? 'compliant' : `short by ${c.deficit}`
+                }</strong></div></div>`
+            )
+            .join('')
+        : '<p class="hint">No duty scopes to report on for this week.</p>';
+    } catch (err) {
+      container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+    }
+  });
+}
+
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
@@ -677,6 +780,8 @@ setupResumeForm();
 setupLandingPageForm();
 setupOutreachScriptForm();
 setupProspectForm();
+setupDutyScopeForm();
+setupDutyComplianceForm();
 refreshConnections();
 refreshMarkets();
 refreshAudienceProfiles();
@@ -684,3 +789,4 @@ refreshCommissionModels();
 refreshResumes();
 refreshLandingPages();
 refreshProspects();
+refreshDutyScopes();

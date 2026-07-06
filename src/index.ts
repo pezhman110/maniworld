@@ -38,3 +38,6 @@ export * from './modules/integrationClients/apolloClient';
 export * from './modules/freelancerRecruitment';
 export * from './modules/salonCapacity';
 export * from './modules/freelancerContracts';
+export * from './modules/presentationCampaigns';
+export * from './modules/prospectOutreach';
+export * from './modules/dutyScope';

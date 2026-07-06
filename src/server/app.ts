@@ -9,12 +9,14 @@ import {
   ResumeIntakeRegistry,
 } from '../modules/presentationCampaigns';
 import { OutreachProspectRegistry, OutreachScriptRegistry } from '../modules/prospectOutreach';
+import { DutyScopeRegistry } from '../modules/dutyScope';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { createCredentialsRouter } from './routes/credentialsRouter';
 import { createMarketsRouter } from './routes/marketsRouter';
 import { createPresentationRouter } from './routes/presentationRouter';
 import { createProspectOutreachRouter } from './routes/prospectOutreachRouter';
+import { createDutyScopeRouter } from './routes/dutyScopeRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -25,6 +27,7 @@ export interface CreateAppOptions {
   landingPages?: LandingPageRegistry;
   prospects?: OutreachProspectRegistry;
   outreachScripts?: OutreachScriptRegistry;
+  dutyScopes?: DutyScopeRegistry;
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
   adminApiKey?: string;
@@ -46,6 +49,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const landingPages = options.landingPages ?? new LandingPageRegistry();
   const prospects = options.prospects ?? new OutreachProspectRegistry();
   const outreachScripts = options.outreachScripts ?? new OutreachScriptRegistry();
+  const dutyScopes = options.dutyScopes ?? new DutyScopeRegistry();
   const testConnection = options.testConnection ?? createConnectionTester();
 
   const app = express();
@@ -62,6 +66,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
     createPresentationRouter({ audienceProfiles, commissionModels, resumeIntakes, landingPages })
   );
   app.use('/api/outreach', auth, createProspectOutreachRouter({ prospects, scripts: outreachScripts }));
+  app.use('/api/duty-scope', auth, createDutyScopeRouter({ dutyScopes, prospects }));
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));

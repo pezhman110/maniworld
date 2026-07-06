@@ -22,6 +22,7 @@
     <button class="tab-btn" data-tab="markets">Markets</button>
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
     <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
+    <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
   </nav>
 
   <main>
@@ -176,6 +177,43 @@
         <label>Match score (0-100) <input id="pMatchScore" type="number" min="0" max="100" required /></label>
         <button type="submit">Add prospect</button>
       </form>
+    </section>
+    <section id="tab-duty-scope" class="tab">
+      <h2>Post-Contract Duty Scope</h2>
+      <p class="hint">
+        Once a prospect's contract has been sent (influencer, banking network, or any other channel), define the
+        concrete post-contract job description here (e.g. "2 visits/day"), tied to the salon services/commission
+        they're compensated for. Log actual visits as check-ins, and monitor weekly compliance against the agreed
+        cadence.
+      </p>
+
+      <h3>Define a duty scope</h3>
+      <form id="dutyScopeForm">
+        <label>Id (optional) <input id="dsId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Prospect id <input id="dsProspectId" type="text" placeholder="e.g. prospect-1" required /></label>
+        <label>Location id (optional) <input id="dsLocationId" type="text" placeholder="e.g. salon-1" /></label>
+        <label>Visits per period <input id="dsVisitsPerPeriod" type="number" min="1" value="2" required /></label>
+        <label>Period
+          <select id="dsPeriod">
+            <option value="day">day</option>
+            <option value="week">week</option>
+          </select>
+        </label>
+        <label>Services covered (comma separated) <input id="dsServicesCovered" type="text" placeholder="manicure, hair" /></label>
+        <label>Commission % (optional) <input id="dsCommissionPercent" type="number" min="0" max="100" /></label>
+        <button type="submit">Define duty scope</button>
+      </form>
+
+      <h3>Duty scopes</h3>
+      <div id="dutyScopesList" class="cards"></div>
+
+      <h3>Weekly compliance monitoring</h3>
+      <form id="dutyComplianceForm">
+        <label>Week start (Monday) <input id="dsWeekStart" type="date" required /></label>
+        <label><input id="dsNonCompliantOnly" type="checkbox" /> Non-compliant only</label>
+        <button type="submit">Check compliance</button>
+      </form>
+      <div id="dutyComplianceList" class="cards"></div>
     </section>
   </main>
 

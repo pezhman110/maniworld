@@ -858,3 +858,54 @@ export interface Prospect {
   notes?: string;
   createdAt: number;
 }
+
+/**
+ * Post-contract duty-scope (شرح وظیفه) types.
+ *
+ * Once a contract is sent (`Prospect.status === 'contract-sent'`), any
+ * network partner - influencer, bank, or otherwise - is given a concrete
+ * job description tied to the services/compensation they receive, e.g.
+ * "visit 2 salons per day". Actual visits/check-ins are then logged and
+ * rolled up into a weekly compliance report so the responsible manager can
+ * monitor whether the agreed cadence is being kept.
+ */
+
+export type DutyPeriod = 'day' | 'week';
+
+/** The post-contract job description agreed for a given prospect/network partner. */
+export interface DutyScope {
+  id: string;
+  prospectId: string;
+  locationId?: string;
+  /** How many visits/actions are expected per `period`, e.g. 2 per day. */
+  visitsPerPeriod: number;
+  period: DutyPeriod;
+  /** Salon services this duty scope is compensated against, e.g. ["manicure", "hair"]. */
+  servicesCovered: string[];
+  /** Optional commission/compensation percentage tied to this duty scope. */
+  commissionPercent?: number;
+  notes?: string;
+  definedAt: number;
+  active: boolean;
+}
+
+/** A single recorded visit/check-in against a duty scope. */
+export interface DutyCheckIn {
+  id: string;
+  dutyScopeId: string;
+  checkedInAt: number;
+  locationId?: string;
+  notes?: string;
+}
+
+/** Weekly roll-up comparing the agreed cadence to what was actually logged. */
+export interface WeeklyComplianceReport {
+  dutyScopeId: string;
+  prospectId: string;
+  /** Start-of-week timestamp (Monday 00:00, in the caller's timezone) this report covers. */
+  weekStart: number;
+  expectedVisits: number;
+  actualVisits: number;
+  compliant: boolean;
+  deficit: number;
+}
