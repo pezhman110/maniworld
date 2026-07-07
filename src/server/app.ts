@@ -14,6 +14,7 @@ import { ProjectRegistry, AIPersonaRegistry } from '../modules/project';
 import { DutyScopeRegistry } from '../modules/dutyScope';
 import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../modules/contentStudio';
 import { createSocialPublisher, SocialPublisher } from '../modules/socialPublisher';
+import { PagesWebsitesRegistry } from '../modules/pagesWebsites';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { TRANSLATIONS } from '../modules/i18n';
@@ -25,6 +26,7 @@ import { createCompliancePolicyRouter } from './routes/compliancePolicyRouter';
 import { createProjectRouter } from './routes/projectRouter';
 import { createDutyScopeRouter } from './routes/dutyScopeRouter';
 import { createContentStudioRouter } from './routes/contentStudioRouter';
+import { createPagesWebsitesRouter, createPublicPagesRouter } from './routes/pagesWebsitesRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -42,6 +44,7 @@ export interface CreateAppOptions {
   contentBriefs?: ContentBriefRegistry;
   contentPlans?: ContentPlanRegistry;
   contentTrends?: TrendResearchRegistry;
+  pagesWebsites?: PagesWebsitesRegistry;
   publishContent?: SocialPublisher;
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
@@ -71,6 +74,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const contentBriefs = options.contentBriefs ?? new ContentBriefRegistry();
   const contentPlans = options.contentPlans ?? new ContentPlanRegistry();
   const contentTrends = options.contentTrends ?? new TrendResearchRegistry();
+  const pagesWebsites = options.pagesWebsites ?? new PagesWebsitesRegistry();
   const publishContent = options.publishContent ?? createSocialPublisher();
   const testConnection = options.testConnection ?? createConnectionTester();
 
@@ -83,6 +87,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   // entrance page and dashboard language switcher (EN/FA/AR) can render
   // localized UI copy before any credentials are entered.
   app.get('/api/i18n', (_req, res) => res.json({ translations: TRANSLATIONS }));
+  app.use('/public', createPublicPagesRouter(pagesWebsites));
 
   const auth = requireAdminApiKey(options.adminApiKey);
   app.use('/api/credentials', auth, createCredentialsRouter(credentialsStore, testConnection));
@@ -107,6 +112,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
       publish: publishContent,
     })
   );
+  app.use('/api/pages-websites', auth, createPagesWebsitesRouter(pagesWebsites));
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));
