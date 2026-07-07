@@ -85,6 +85,7 @@ function applyApiKey(key, status) {
   refreshInstagramAds();
   refreshInstagramAdsFallbackQueue();
   refreshInstagramGrowth();
+  refreshLinkedInGrowth();
   refreshPagesWebsiteCatalog();
   refreshPagesWebsites();
   refreshPagesImports();
@@ -1196,6 +1197,18 @@ const INSTAGRAM_GROWTH_KPIS = [
   ['blocked', 'Blocked'],
 ];
 
+const LINKEDIN_GROWTH_KPIS = [
+  ['total', 'Total'],
+  ['personal', 'Personal'],
+  ['company', 'Company'],
+  ['consented', 'Consented'],
+  ['leadForms', 'Lead forms'],
+  ['sellerAssigned', 'Seller assigned'],
+  ['hot', 'Hot'],
+  ['optedOut', 'Opted out'],
+  ['blocked', 'Blocked'],
+];
+
 function renderInstagramGrowthAccount(account) {
   const contacts = account.contacts
     .map((c) => `${escapeHtml(c.kind)}: ${escapeHtml(c.value)} (${escapeHtml(c.source)}, proof: ${escapeHtml(c.proof)})`)
@@ -1386,6 +1399,149 @@ function setupInstagramGrowthForms() {
         }),
       });
       refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function renderLinkedInLead(lead) {
+  const assignment = lead.sellerAssignment;
+  const brief = assignment && assignment.brief;
+  const contacts = (lead.contactPoints || [])
+    .map((c) => `${escapeHtml(c.channel)}: ${escapeHtml(c.value || '—')} (${escapeHtml(c.source)}, ${escapeHtml(c.consentStatus)})`)
+    .join('<br />');
+  return `<div class="card">
+    <h4>${escapeHtml(lead.name)} <span class="status ${lead.eligibility.status === 'allowed' ? 'connected' : lead.eligibility.status === 'blocked' ? 'invalid' : 'unverified'}">${escapeHtml(lead.stage)}</span></h4>
+    <div>ID: <code>${escapeHtml(lead.id)}</code></div>
+    <div>${escapeHtml(lead.scope)} / ${escapeHtml(lead.leadType)} · Score: ${lead.score} · Source: ${escapeHtml(lead.source)}</div>
+    <div>Profile: ${lead.profileUrl ? `<a href="${escapeHtml(lead.profileUrl)}" target="_blank" rel="noreferrer">open</a>` : '—'} · Company: ${lead.companyUrl ? `<a href="${escapeHtml(lead.companyUrl)}" target="_blank" rel="noreferrer">open</a>` : escapeHtml(lead.companyName || '—')}</div>
+    <div>Contacts:<br />${contacts || '—'}</div>
+    <div>Legal gate: <strong>${escapeHtml(lead.eligibility.status)}</strong> — ${escapeHtml(lead.eligibility.reason)}</div>
+    <div>Allowed paths: ${(lead.eligibility.allowedPaths || []).map(escapeHtml).join(', ') || '—'}</div>
+    ${brief ? `<hr /><div><strong>Seller Brief:</strong> ${escapeHtml(brief.ownerSeller)} · ${escapeHtml(brief.priority)} · ${escapeHtml(brief.recommendedNextAction)}</div>
+      <div>Suggested: ${escapeHtml(brief.suggestedMessage)}</div>
+      <div>Actions: ${brief.availableActions.map(escapeHtml).join(', ')}</div>` : ''}
+  </div>`;
+}
+
+function renderLinkedInTool(tool) {
+  return `<div class="card">
+    <h4>${escapeHtml(tool.name)} <span class="status ${tool.status === 'connected' ? 'connected' : tool.status === 'legal' ? 'unverified' : 'invalid'}">${escapeHtml(tool.status)}</span></h4>
+    <div>Provider: ${escapeHtml(tool.provider)} · Legal gate: ${escapeHtml(tool.legalGateStatus)}</div>
+    <div>Purpose: ${escapeHtml(tool.purpose)}</div>
+    <div>Required for: ${tool.requiredFor.map(escapeHtml).join(', ')}</div>
+    <div>API: ${tool.apiVerified ? 'yes' : 'no'} · Sandbox: ${tool.sandboxTested ? 'yes' : 'no'} · Credentials: ${tool.credentialsStored ? 'yes' : 'no'} · Webhook: ${tool.webhookReady ? 'yes' : 'no'} · Export: ${tool.dataExportAvailable ? 'yes' : 'no'}</div>
+    <div>Owner: ${escapeHtml(tool.owner)} · Notes: ${escapeHtml(tool.notes || '—')}</div>
+  </div>`;
+}
+
+async function refreshLinkedInGrowth() {
+  const metricsContainer = document.getElementById('linkedinGrowthMetrics');
+  const leadsContainer = document.getElementById('linkedinLeads');
+  const toolsContainer = document.getElementById('linkedinTools');
+  if (!metricsContainer || !leadsContainer || !toolsContainer) return;
+  try {
+    const [{ metrics }, { leads }, { tools }] = await Promise.all([
+      apiFetch('/linkedin-growth/metrics'),
+      apiFetch('/linkedin-growth/leads'),
+      apiFetch('/linkedin-growth/tools'),
+    ]);
+    metricsContainer.innerHTML = LINKEDIN_GROWTH_KPIS.map(
+      ([key, label]) => `<div class="kpi-card"><div class="kpi-value">${metrics[key] || 0}</div><div class="kpi-label">${label}</div></div>`
+    ).join('');
+    leadsContainer.innerHTML = leads.length ? leads.map(renderLinkedInLead).join('') : '<p class="hint">No LinkedIn leads yet.</p>';
+    toolsContainer.innerHTML = tools.map(renderLinkedInTool).join('');
+  } catch (err) {
+    metricsContainer.innerHTML = `<p class="hint">Failed to load LinkedIn Growth: ${err.message}</p>`;
+  }
+}
+
+function setupLinkedInGrowthForms() {
+  const leadForm = document.getElementById('linkedinLeadForm');
+  const actionForm = document.getElementById('linkedinActionForm');
+  const workbenchForm = document.getElementById('linkedinWorkbenchForm');
+  if (!leadForm || !actionForm || !workbenchForm) return;
+
+  leadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/linkedin-growth/leads', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: document.getElementById('liName').value,
+          scope: document.getElementById('liScope').value,
+          leadType: document.getElementById('liLeadType').value,
+          source: document.getElementById('liSource').value,
+          profileUrl: document.getElementById('liProfileUrl').value || undefined,
+          companyUrl: document.getElementById('liCompanyUrl').value || undefined,
+          companyName: document.getElementById('liCompanyName').value || undefined,
+          industry: document.getElementById('liIndustry').value || undefined,
+          campaign: document.getElementById('liCampaign').value || undefined,
+          score: Number(document.getElementById('liScore').value || 0),
+        }),
+      });
+      e.target.reset();
+      refreshLinkedInGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  actionForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const action = e.submitter.dataset.action;
+    const leadId = encodeURIComponent(document.getElementById('liaLeadId').value);
+    const proof = document.getElementById('liaProof').value;
+    try {
+      if (action === 'path') {
+        await apiFetch(`/linkedin-growth/leads/${leadId}/legal-path`, {
+          method: 'POST',
+          body: JSON.stringify({
+            path: document.getElementById('liaPath').value,
+            approvedTemplate: document.getElementById('liaTemplate').value,
+            legalGateRequired: true,
+            allowedHours: { startHour: 9, endHour: 18 },
+            noBulkMessaging: true,
+            manualOnly: true,
+            proof,
+          }),
+        });
+      } else if (action === 'form') {
+        const raw = document.getElementById('liaFormAnswers').value || '{}';
+        await apiFetch(`/linkedin-growth/leads/${leadId}/lead-gen-form`, {
+          method: 'POST',
+          body: JSON.stringify({ formId: `dashboard-${Date.now()}`, answers: JSON.parse(raw), proof }),
+        });
+      } else if (action === 'assign') {
+        await apiFetch(`/linkedin-growth/leads/${leadId}/assign-seller`, {
+          method: 'POST',
+          body: JSON.stringify({
+            seller: document.getElementById('liaSeller').value,
+            reason: proof,
+            slaFollowUpDeadline: Date.now() + 86400000,
+            suggestedMessage: document.getElementById('liaTemplate').value,
+            forceNoReplyPhoneHandoff: document.getElementById('liaNoReplyPhone').checked,
+          }),
+        });
+      }
+      refreshLinkedInGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  workbenchForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const seller = encodeURIComponent(document.getElementById('liWorkbenchSeller').value);
+      const { workbench } = await apiFetch(`/linkedin-growth/workbench/${seller}`);
+      const populatedTabs = Object.entries(workbench.tabs).filter(([, items]) => items.length);
+      document.getElementById('linkedinWorkbench').innerHTML = populatedTabs.length
+        ? populatedTabs
+            .map(([tab, items]) => `<div class="card"><h4>${escapeHtml(tab)}</h4>${items.map((item) => `<div>${escapeHtml(item.brief.leadName)} · ${escapeHtml(item.brief.recommendedNextAction)}</div>`).join('')}</div>`)
+            .join('')
+        : '<p class="hint">No assigned leads for this seller.</p>';
     } catch (err) {
       alert(err.message);
     }
@@ -2208,6 +2364,7 @@ setupContentBriefForm();
 setupContentPlanForm();
 setupInstagramAdForm();
 setupInstagramGrowthForms();
+setupLinkedInGrowthForms();
 setupPagesWebsiteForm();
 setupPagesImportForm();
 refreshMissionGroups();
@@ -2228,6 +2385,7 @@ refreshContentFallbackQueue();
 refreshInstagramAds();
 refreshInstagramAdsFallbackQueue();
 refreshInstagramGrowth();
+refreshLinkedInGrowth();
 refreshPagesWebsiteCatalog();
 refreshPagesWebsites();
 refreshPagesImports();

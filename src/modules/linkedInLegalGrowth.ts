@@ -254,6 +254,23 @@ const COMPANY_PATHS: LinkedInContactPath[] = [
   'public-company-contact',
   'landing-page',
 ];
+const WORKBENCH_TABS: LinkedInSellerWorkbenchTab[] = [
+  'my-assigned-leads',
+  'hot-leads',
+  'waiting-for-reply',
+  'meeting-ready',
+  'need-call',
+  'need-inmail',
+  'need-connection-follow-up',
+  'lead-gen-form-submissions',
+  'buyer-leads',
+  'seller-leads',
+  'investor-leads',
+  'corporate-partner-leads',
+  'archive-not-ready',
+  'my-targets',
+  'my-tools',
+];
 
 let leadSeq = 0;
 let assignmentSeq = 0;
@@ -633,25 +650,10 @@ export class LinkedInLegalGrowthRegistry {
 
   buildWorkbench(seller: string): LinkedInWorkbench {
     const assignments = this.listAssignments(seller);
-    const emptyTabs = Object.fromEntries(
-      [
-        'my-assigned-leads',
-        'hot-leads',
-        'waiting-for-reply',
-        'meeting-ready',
-        'need-call',
-        'need-inmail',
-        'need-connection-follow-up',
-        'lead-gen-form-submissions',
-        'buyer-leads',
-        'seller-leads',
-        'investor-leads',
-        'corporate-partner-leads',
-        'archive-not-ready',
-        'my-targets',
-        'my-tools',
-      ].map((tab) => [tab, []])
-    ) as Record<LinkedInSellerWorkbenchTab, LinkedInSellerAssignment[]>;
+    const emptyTabs = WORKBENCH_TABS.reduce((tabs, tab) => {
+      tabs[tab] = [];
+      return tabs;
+    }, {} as Record<LinkedInSellerWorkbenchTab, LinkedInSellerAssignment[]>);
 
     for (const assignment of assignments) {
       const lead = this.mustGet(assignment.leadId);

@@ -35,6 +35,7 @@
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
     <button class="tab-btn" data-tab="instagram-growth">Instagram Growth</button>
+    <button class="tab-btn" data-tab="linkedin-growth">LinkedIn Growth</button>
     <button class="tab-btn" data-tab="pages-websites" data-i18n="pages.nav">Pages &amp; Websites</button>
   </nav>
 
@@ -680,6 +681,99 @@
       <h3>Accounts, Legal Gate, Archive / Stop</h3>
       <div id="instagramGrowthAccounts" class="cards"></div>
       <div id="instagramGrowthArchive" class="cards"></div>
+    </section>
+
+    <section id="tab-linkedin-growth" class="tab">
+      <h2>LinkedIn Legal Growth, Contact &amp; Seller Handoff Engine</h2>
+      <p class="hint">
+        Consent-first LinkedIn module for personal and company leads: profile/company discovery, legal contact
+        paths, Lead Gen Forms, matched audiences/ABM, scoring, seller assignment, Seller Brief Cards, and the
+        technical connector/legal gate page. No scraping, guessed emails, fake accounts, bulk spam, or unauthorized messaging.
+      </p>
+
+      <h3>Funnel Summary</h3>
+      <div id="linkedinGrowthMetrics" class="kpi-grid"></div>
+
+      <h3>Add LinkedIn person / company lead</h3>
+      <form id="linkedinLeadForm">
+        <label>Name <input id="liName" type="text" required /></label>
+        <label>Scope
+          <select id="liScope">
+            <option value="personal">personal</option>
+            <option value="company">company</option>
+          </select>
+        </label>
+        <label>Lead type
+          <select id="liLeadType">
+            <option value="unknown">unknown</option>
+            <option value="investor">investor</option>
+            <option value="buyer">buyer</option>
+            <option value="seller">seller</option>
+            <option value="partner">partner</option>
+            <option value="freelancer">freelancer</option>
+            <option value="influencer">influencer</option>
+            <option value="candidate">candidate</option>
+            <option value="executive">executive</option>
+            <option value="decision-maker">decision-maker</option>
+            <option value="hotel">hotel</option>
+            <option value="salon-group">salon-group</option>
+            <option value="vendor">vendor</option>
+            <option value="supplier">supplier</option>
+          </select>
+        </label>
+        <label>Source <input id="liSource" type="text" placeholder="Sales Navigator / Lead Gen Form / company page" required /></label>
+        <label>Profile URL <input id="liProfileUrl" type="url" /></label>
+        <label>Company URL <input id="liCompanyUrl" type="url" /></label>
+        <label>Company <input id="liCompanyName" type="text" /></label>
+        <label>Industry <input id="liIndustry" type="text" /></label>
+        <label>Campaign <input id="liCampaign" type="text" /></label>
+        <label>Score <input id="liScore" type="number" min="0" max="100" value="75" /></label>
+        <button type="submit">Add LinkedIn lead</button>
+      </form>
+
+      <h3>Legal path / Lead Gen Form / seller assignment</h3>
+      <form id="linkedinActionForm">
+        <label>Lead id <input id="liaLeadId" type="text" required /></label>
+        <label>Path
+          <select id="liaPath">
+            <option value="connection-request">connection-request</option>
+            <option value="sales-navigator-inmail">sales-navigator-inmail</option>
+            <option value="accepted-connection-message">accepted-connection-message</option>
+            <option value="conversation-ad">conversation-ad</option>
+            <option value="message-ad">message-ad</option>
+            <option value="lead-gen-form">lead-gen-form</option>
+            <option value="matched-audience">matched-audience</option>
+            <option value="company-list-abm">company-list-abm</option>
+            <option value="contact-list-targeting">contact-list-targeting</option>
+            <option value="website-retargeting">website-retargeting</option>
+            <option value="landing-page">landing-page</option>
+            <option value="public-company-contact">public-company-contact</option>
+          </select>
+        </label>
+        <label>Approved template / suggested message
+          <input id="liaTemplate" type="text" value="Hi, may I send a short relevant introduction?" />
+        </label>
+        <label>Proof <input id="liaProof" type="text" placeholder="template approval / form id / reply proof" required /></label>
+        <label>Form answers JSON <textarea id="liaFormAnswers" placeholder='{"Email":"lead@example.com","Phone":"+971...","Budget":"300k AED"}'></textarea></label>
+        <label>Seller <input id="liaSeller" type="text" placeholder="seller name" /></label>
+        <label><input id="liaNoReplyPhone" type="checkbox" /> no-reply legally sourced phone handoff</label>
+        <button type="submit" data-action="path">Select legal path</button>
+        <button type="submit" data-action="form">Record Lead Gen Form</button>
+        <button type="submit" data-action="assign">Assign seller</button>
+      </form>
+
+      <h3>Seller Workbench</h3>
+      <form id="linkedinWorkbenchForm">
+        <label>Seller <input id="liWorkbenchSeller" type="text" placeholder="seller name" required /></label>
+        <button type="submit">Open workbench</button>
+      </form>
+      <div id="linkedinWorkbench" class="cards"></div>
+
+      <h3>Technical Tools / Connectors / Legal Gate</h3>
+      <div id="linkedinTools" class="cards"></div>
+
+      <h3>LinkedIn leads and Seller Brief Cards</h3>
+      <div id="linkedinLeads" class="cards"></div>
     </section>
 
     <section id="tab-pages-websites" class="tab">
