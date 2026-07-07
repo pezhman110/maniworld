@@ -37,6 +37,8 @@ header h1 { font-size: 1.25rem; margin: 0; font-weight: 700; letter-spacing: 0.2
 .apikey-bar input { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; min-width: 220px; }
 .apikey-bar button { padding: 6px 12px; border-radius: 6px; border: none; background: white; color: var(--accent-dark); font-weight: 600; cursor: pointer; }
 .apikey-bar #apiKeyStatus { color: white; }
+.apikey-bar .lang-label { margin-inline-start: 12px; }
+.apikey-bar #langSwitcher { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); }
 
 nav { display: flex; gap: 4px; padding: 12px 24px 0; flex-wrap: wrap; }
 .tab-btn {

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mani World — Sign In</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="entrance-card">
+    <div class="brand">
+      <div class="brand-mark">MW</div>
+      <h1 data-i18n="entrance.title">Mani World</h1>
+      <p data-i18n="entrance.subtitle">Lead-to-booking growth &amp; recruitment control center</p>
+    </div>
+
+    <div class="lang-toggle" id="langToggle" role="group" aria-label="Language">
+      <button type="button" data-lang="en" class="active">English</button>
+      <button type="button" data-lang="fa">فارسی</button>
+      <button type="button" data-lang="ar">العربية</button>
+    </div>
+
+    <form id="entranceForm" autocomplete="off">
+      <div class="field">
+        <label for="entranceApiKey" data-i18n="entrance.apiKeyLabel">Admin API key</label>
+        <input
+          id="entranceApiKey"
+          type="password"
+          data-i18n-placeholder="entrance.apiKeyPlaceholder"
+          placeholder="x-api-key (leave empty if server has none configured)"
+        />
+      </div>
+      <button type="submit" class="enter-btn" data-i18n="entrance.enter">Enter dashboard</button>
+      <p id="entranceStatus" class="status-msg"></p>
+    </form>
+
+    <p class="footnote" data-i18n="entrance.footnote">
+      Need access? Contact your Mani World administrator.
+    </p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

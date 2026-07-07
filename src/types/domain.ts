@@ -431,7 +431,7 @@ export interface ChannelBreakdownEntry {
   bookingRate: number;
 }
 
-export type Locale = 'en' | 'fa';
+export type Locale = 'en' | 'fa' | 'ar';
 
 // ---------------------------------------------------------------------------
 // Configurable targets, scheduling/assignment, service lines & integrations

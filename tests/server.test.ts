@@ -21,6 +21,23 @@ describe('admin API app', () => {
     expect(res.body).toEqual({ status: 'ok' });
   });
 
+  it('GET /api/i18n is public and returns the en/fa/ar translation dictionary', async () => {
+    const { app } = buildApp('secret-key');
+    const res = await request(app).get('/api/i18n');
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body.translations)).toEqual(expect.arrayContaining(['en', 'fa', 'ar']));
+    expect(res.body.translations.en['dashboard.title']).toBeDefined();
+  });
+
+  it('redirects GET / to the entrance page when the dashboard is served', async () => {
+    const credentialsStore = new IntegrationCredentialsStore(undefined, testKey);
+    const marketRegistry = new MarketRegistry();
+    const app = createApp({ credentialsStore, marketRegistry, serveDashboard: true });
+    const res = await request(app).get('/');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBe('/entrance/');
+  });
+
   it('rejects API requests without a valid x-api-key when one is configured', async () => {
     const { app } = buildApp('secret-key');
     const res = await request(app).get('/api/credentials');

@@ -19,6 +19,11 @@ const PROVIDER_FIELDS = {
 // is never written to disk in clear text; it must be re-entered per page load.
 let adminApiKey = '';
 
+const RTL_LOCALES = new Set(['fa', 'ar']);
+const LOCALE_STORAGE_KEY = 'mw_locale';
+const HANDOFF_KEY = 'mw_handoff_api_key';
+let dashboardTranslations = null;
+
 function getApiKey() {
   return adminApiKey;
 }
@@ -49,21 +54,72 @@ function setupApiKeyBar() {
   const input = document.getElementById('apiKey');
   const status = document.getElementById('apiKeyStatus');
   document.getElementById('saveApiKey').addEventListener('click', () => {
-    adminApiKey = input.value;
-    status.textContent = 'Saved for this session.';
-    refreshMissionGroups();
-    refreshConnections();
-    refreshMarkets();
-    refreshAudienceProfiles();
-    refreshCommissionModels();
-    refreshResumes();
-    refreshLandingPages();
-    refreshProspects();
-    refreshDutyScopes();
-    refreshPipelineOverview();
-    refreshContentBriefs();
-    refreshContentFallbackQueue();
-    setTimeout(() => (status.textContent = ''), 2000);
+    applyApiKey(input.value, status);
+  });
+
+  // Consume a one-time handoff from the entrance sign-in page: read it once
+  // and delete it immediately so the key is never persisted to disk.
+  const handoff = sessionStorage.getItem(HANDOFF_KEY);
+  if (handoff) {
+    sessionStorage.removeItem(HANDOFF_KEY);
+    input.value = handoff;
+    applyApiKey(handoff, status);
+  }
+}
+
+function applyApiKey(key, status) {
+  adminApiKey = key;
+  status.textContent = 'Saved for this session.';
+  refreshMissionGroups();
+  refreshConnections();
+  refreshMarkets();
+  refreshAudienceProfiles();
+  refreshCommissionModels();
+  refreshResumes();
+  refreshLandingPages();
+  refreshProspects();
+  refreshDutyScopes();
+  refreshPipelineOverview();
+  refreshContentBriefs();
+  refreshContentFallbackQueue();
+  setTimeout(() => (status.textContent = ''), 2000);
+}
+
+function currentLocale() {
+  return localStorage.getItem(LOCALE_STORAGE_KEY) || 'en';
+}
+
+function applyDashboardDirection(locale) {
+  document.documentElement.lang = locale;
+  document.documentElement.dir = RTL_LOCALES.has(locale) ? 'rtl' : 'ltr';
+}
+
+function applyDashboardTranslations(locale) {
+  if (!dashboardTranslations) return;
+  const dict = dashboardTranslations[locale] || dashboardTranslations.en || {};
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    if (dict[key]) el.textContent = dict[key];
+  });
+}
+
+async function setupLangSwitcher() {
+  const select = document.getElementById('langSwitcher');
+  const locale = currentLocale();
+  select.value = locale;
+  applyDashboardDirection(locale);
+  try {
+    const res = await fetch('/api/i18n');
+    const body = await res.json();
+    dashboardTranslations = body.translations || {};
+  } catch (err) {
+    dashboardTranslations = {};
+  }
+  applyDashboardTranslations(locale);
+  select.addEventListener('change', () => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, select.value);
+    applyDashboardDirection(select.value);
+    applyDashboardTranslations(select.value);
   });
 }
 
@@ -1459,6 +1515,7 @@ async function refreshContentFallbackQueue() {
 
 setupTabs();
 setupApiKeyBar();
+setupLangSwitcher();
 populateProviderSelect();
 setupMissionGroupForm();
 setupMissionStepForm();

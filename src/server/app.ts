@@ -15,6 +15,7 @@ import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from
 import { createSocialPublisher, SocialPublisher } from '../modules/socialPublisher';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
+import { TRANSLATIONS } from '../modules/i18n';
 import { createCredentialsRouter } from './routes/credentialsRouter';
 import { createMarketsRouter } from './routes/marketsRouter';
 import { createPresentationRouter } from './routes/presentationRouter';
@@ -72,6 +73,11 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
+  // Public (no admin key required): the full translation dictionary so the
+  // entrance page and dashboard language switcher (EN/FA/AR) can render
+  // localized UI copy before any credentials are entered.
+  app.get('/api/i18n', (_req, res) => res.json({ translations: TRANSLATIONS }));
+
   const auth = requireAdminApiKey(options.adminApiKey);
   app.use('/api/credentials', auth, createCredentialsRouter(credentialsStore, testConnection));
   app.use('/api/markets', auth, createMarketsRouter(marketRegistry));
@@ -97,6 +103,10 @@ export function createApp(options: CreateAppOptions = {}): Express {
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));
+    app.use('/entrance', express.static(path.join(process.cwd(), 'public', 'entrance')));
+    // Land users on the branded entrance/sign-in page first instead of
+    // dropping them straight into the dashboard's plain API-key bar.
+    app.get('/', (_req, res) => res.redirect('/entrance/'));
   }
 
   return app;

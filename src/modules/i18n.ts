@@ -4,9 +4,10 @@ import { Locale } from '../types/domain';
  * i18n module.
  *
  * The whole team is English-speaking, so English is the default locale;
- * Farsi is kept available via the same dictionary/lookup so no UI text is
- * ever hardcoded in one language only. Add new keys here rather than
- * inlining strings in dashboard/report-rendering code.
+ * Farsi and Arabic (for the UAE market) are kept available via the same
+ * dictionary/lookup so no UI text is ever hardcoded in one language only.
+ * Add new keys here rather than inlining strings in dashboard/report-rendering
+ * code.
  */
 
 export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
@@ -40,6 +41,15 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'dashboard.autoRefresh': 'Auto-refresh',
     'dashboard.timezone': 'Timezone',
     'dashboard.language': 'Language',
+    'entrance.title': 'Mani World',
+    'entrance.subtitle': 'Lead-to-booking growth & recruitment control center',
+    'entrance.apiKeyLabel': 'Admin API key',
+    'entrance.apiKeyPlaceholder': 'x-api-key (leave empty if server has none configured)',
+    'entrance.enter': 'Enter dashboard',
+    'entrance.footnote': 'Need access? Contact your Mani World administrator.',
+    'entrance.checking': 'Checking…',
+    'entrance.invalid': 'Invalid API key. Please try again.',
+    'entrance.success': 'Signed in — redirecting…',
   },
   fa: {
     'dashboard.title': 'داشبورد سرعت‌سنج فروش',
@@ -71,6 +81,55 @@ export const TRANSLATIONS: Record<Locale, Record<string, string>> = {
     'dashboard.autoRefresh': 'رفرش خودکار',
     'dashboard.timezone': 'منطقه زمانی',
     'dashboard.language': 'زبان',
+    'entrance.title': 'مانی ورلد',
+    'entrance.subtitle': 'مرکز کنترل رشد فروش و استخدام',
+    'entrance.apiKeyLabel': 'کلید API مدیریت',
+    'entrance.apiKeyPlaceholder': 'x-api-key (در صورت عدم تنظیم روی سرور، خالی بگذارید)',
+    'entrance.enter': 'ورود به داشبورد',
+    'entrance.footnote': 'به دسترسی نیاز دارید؟ با مدیر مانی ورلد تماس بگیرید.',
+    'entrance.checking': 'در حال بررسی…',
+    'entrance.invalid': 'کلید API نامعتبر است. دوباره تلاش کنید.',
+    'entrance.success': 'ورود موفق — در حال انتقال…',
+  },
+  ar: {
+    'dashboard.title': 'لوحة متابعة وتيرة المبيعات',
+    'dashboard.market': 'السوق',
+    'dashboard.branch': 'الفرع',
+    'dashboard.rep': 'مندوب المبيعات',
+    'dashboard.achievedSoFar': 'المحقق حتى الآن',
+    'dashboard.expectedByNow': 'المتوقع حتى الآن',
+    'dashboard.floorTarget': 'الحد الأدنى المستهدف',
+    'dashboard.stretchTarget': 'الهدف الطموح',
+    'dashboard.onTrack': 'على المسار الصحيح',
+    'dashboard.belowTarget': 'دون الهدف',
+    'dashboard.aboveMax': 'فوق الهدف الطموح',
+    'dashboard.missed': 'لم يتحقق',
+    'dashboard.noCap': 'بدون سقف',
+    'dashboard.requiredMultiplier': 'التسارع المطلوب لبقية اليوم',
+    'dashboard.runRateProjection': 'الإجمالي المتوقع بنهاية اليوم',
+    'dashboard.vsYesterday': 'مقارنة بالأمس',
+    'dashboard.vsLastWeek': 'مقارنة بالأسبوع الماضي',
+    'dashboard.vsSameDayLastMonth': 'مقارنة بنفس اليوم من الشهر الماضي',
+    'dashboard.alertRed': 'متأخر عن الوتيرة — يحتاج إلى اهتمام',
+    'dashboard.alertBlue': 'متقدم على الوتيرة — طاقة إضافية متاحة',
+    'dashboard.funnel': 'قمع المبيعات',
+    'dashboard.channelBreakdown': 'تفصيل القنوات',
+    'dashboard.costPerLead': 'تكلفة العميل المحتمل',
+    'dashboard.costPerBooking': 'تكلفة الحجز',
+    'dashboard.trend7Day': 'اتجاه 7 أيام',
+    'dashboard.exportCsv': 'تصدير CSV',
+    'dashboard.autoRefresh': 'تحديث تلقائي',
+    'dashboard.timezone': 'المنطقة الزمنية',
+    'dashboard.language': 'اللغة',
+    'entrance.title': 'ماني وورلد',
+    'entrance.subtitle': 'مركز التحكم في نمو المبيعات والتوظيف',
+    'entrance.apiKeyLabel': 'مفتاح API للمسؤول',
+    'entrance.apiKeyPlaceholder': 'x-api-key (اتركه فارغًا إذا لم يُضبط على الخادم)',
+    'entrance.enter': 'الدخول إلى لوحة التحكم',
+    'entrance.footnote': 'هل تحتاج إلى صلاحية دخول؟ تواصل مع مسؤول ماني وورلد.',
+    'entrance.checking': 'جارٍ التحقق…',
+    'entrance.invalid': 'مفتاح API غير صالح. حاول مرة أخرى.',
+    'entrance.success': 'تم تسجيل الدخول — جارٍ التحويل…',
   },
 };
 
