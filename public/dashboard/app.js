@@ -510,7 +510,7 @@ const PROSPECT_ACTIONS = {
     { label: 'Approve', action: 'approve' },
     { label: 'Reject', action: 'reject' },
   ],
-  approved: [{ label: 'Send contract', action: 'send-contract' }],
+  approved: [{ label: 'Record reference check', action: 'reference-check' }],
 };
 
 async function runProspectAction(id, action) {
@@ -613,6 +613,17 @@ async function runProspectAction(id, action) {
         });
         break;
       }
+      case 'reference-check': {
+        const contacted = confirm('Confirm: the previous employer/workplace has been contacted?');
+        const confirmedBy = prompt('Confirmed by:');
+        if (!confirmedBy) return;
+        const notes = prompt('Notes (optional):') || undefined;
+        await apiFetch(`/outreach/prospects/${id}/reference-check`, {
+          method: 'POST',
+          body: JSON.stringify({ contactedPreviousEmployer: contacted, confirmedBy, notes }),
+        });
+        break;
+      }
       case 'send-contract':
         await apiFetch(`/outreach/prospects/${id}/send-contract`, { method: 'POST' });
         break;
@@ -634,6 +645,9 @@ async function refreshProspects() {
       ? prospects
           .map((p) => {
             const actions = PROSPECT_ACTIONS[p.status] || [];
+            if (p.status === 'approved' && p.referenceCheck?.contactedPreviousEmployer) {
+              actions.push({ label: 'Send contract', action: 'send-contract' });
+            }
             const buttons = actions
               .map(
                 (a) =>
@@ -644,12 +658,105 @@ async function refreshProspects() {
               p.audienceProfileId ? ` / Audience: ${p.audienceProfileId}` : ''
             }</div><div>Match score: ${p.matchScore}%</div><div>Status: <strong>${p.status}</strong></div>${
               p.email || p.phone ? `<div>Contact: ${p.email || ''} ${p.phone || ''}</div>` : ''
+            }${
+              p.referenceCheck
+                ? `<div>Reference check: ${p.referenceCheck.contactedPreviousEmployer ? 'confirmed' : 'not confirmed'}</div>`
+                : ''
             }<div>${buttons}</div></div>`;
           })
           .join('')
       : '<p class="hint">No prospects sourced yet.</p>';
     container.querySelectorAll('button[data-action]').forEach((btn) =>
       btn.addEventListener('click', () => runProspectAction(btn.dataset.id, btn.dataset.action))
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupCompliancePolicyForm() {
+  document.getElementById('compliancePolicyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('cpId').value.trim();
+    const scope = document.getElementById('cpScope').value;
+    const route = document.getElementById('cpRoute').value;
+    const audienceProfileId = document.getElementById('cpAudienceProfileId').value.trim() || undefined;
+    const rules = document
+      .getElementById('cpRules')
+      .value.split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line, index) => {
+        const [prefix, ...rest] = line.split(':');
+        const kind = prefix.trim().toLowerCase() === 'must-not' ? 'must-not' : 'must';
+        const text = rest.length ? rest.join(':').trim() : line;
+        return { id: `${id}-rule-${index}`, kind, text };
+      });
+    try {
+      await apiFetch('/compliance-policy', {
+        method: 'POST',
+        body: JSON.stringify({ id, scope, route, audienceProfileId, rules }),
+      });
+      e.target.reset();
+      refreshCompliancePolicies();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function runCompliancePolicyAction(id, action) {
+  try {
+    if (action === 'confirm-same') {
+      await apiFetch(`/compliance-policy/${id}/confirm-same`, { method: 'POST' });
+    } else if (action === 'revise-rules') {
+      const text = prompt('New rules, one per line, prefix "must:" or "must-not:":');
+      if (text === null) return;
+      const rules = text
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const [prefix, ...rest] = line.split(':');
+          const kind = prefix.trim().toLowerCase() === 'must-not' ? 'must-not' : 'must';
+          const ruleText = rest.length ? rest.join(':').trim() : line;
+          return { id: `${id}-rule-${index}`, kind, text: ruleText };
+        });
+      await apiFetch(`/compliance-policy/${id}/revise-rules`, {
+        method: 'POST',
+        body: JSON.stringify({ rules }),
+      });
+    } else if (action === 'delete') {
+      await apiFetch(`/compliance-policy/${id}`, { method: 'DELETE' });
+    }
+    refreshCompliancePolicies();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function refreshCompliancePolicies() {
+  const container = document.getElementById('compliancePoliciesList');
+  try {
+    const { policies } = await apiFetch('/compliance-policy?onlyActive=false');
+    container.innerHTML = policies.length
+      ? policies
+          .map((p) => {
+            const rulesHtml = p.rules
+              .map((r) => `<li><strong>${r.kind}</strong>: ${r.text}</li>`)
+              .join('');
+            return `<div class="card"><h4>${p.id} (${p.scope} / ${p.route})</h4>${
+              p.audienceProfileId ? `<div>Audience: ${p.audienceProfileId}</div>` : ''
+            }<div>Version: ${p.version}</div><div>Last confirmed: ${new Date(p.lastConfirmedAt).toLocaleString()}</div><ul>${rulesHtml}</ul><div>
+              <button data-action="confirm-same" data-id="${p.id}">Confirm same</button>
+              <button data-action="revise-rules" data-id="${p.id}">Revise rules</button>
+              <button data-action="delete" data-id="${p.id}">Delete</button>
+            </div></div>`;
+          })
+          .join('')
+      : '<p class="hint">No compliance policies defined yet.</p>';
+    container.querySelectorAll('button[data-action]').forEach((btn) =>
+      btn.addEventListener('click', () => runCompliancePolicyAction(btn.dataset.id, btn.dataset.action))
     );
   } catch (err) {
     container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
@@ -1363,6 +1470,7 @@ setupResumeForm();
 setupLandingPageForm();
 setupOutreachScriptForm();
 setupProspectForm();
+setupCompliancePolicyForm();
 setupDutyScopeForm();
 setupDutyQuotaReadingForm();
 setupDutyComplianceForm();
@@ -1378,6 +1486,7 @@ refreshCommissionModels();
 refreshResumes();
 refreshLandingPages();
 refreshProspects();
+refreshCompliancePolicies();
 refreshDutyScopes();
 refreshPipelineOverview();
 refreshContentBriefs();

@@ -106,10 +106,12 @@ describe('HireDecisionRegistry', () => {
       locationId: 'salon_1',
       hrContact: 'hr@maniworld.com',
       salesManagerContact: 'manager@maniworld.com',
+      referenceCheckConfirmed: true,
     });
 
     expect(record.decision).toBe('hired');
     expect(record.offerLetterText).toBeDefined();
+    expect(record.referenceCheckConfirmed).toBe(true);
     expect(notifications).toHaveLength(4);
     expect(notifications.map((n) => n.recipientRole)).toEqual(['hr', 'sales-manager', 'freelancer', 'salon']);
   });
@@ -121,6 +123,24 @@ describe('HireDecisionRegistry', () => {
         freelancer: makeFreelancer(),
         decision: 'hired',
         decidedBy: 'hr',
+        hrContact: 'hr@maniworld.com',
+        salesManagerContact: 'manager@maniworld.com',
+        referenceCheckConfirmed: true,
+      })
+    ).toThrow();
+  });
+
+  it('rejects a "hired" decision without a confirmed previous-employer reference check', () => {
+    const registry = new HireDecisionRegistry();
+    const contractRegistry = new FreelancerContractRegistry();
+    const freelancer = makeFreelancer();
+    const contract = contractRegistry.sign(freelancer, makePlan());
+    expect(() =>
+      registry.decide({
+        freelancer,
+        contract,
+        decision: 'hired',
+        decidedBy: 'hr-manager',
         hrContact: 'hr@maniworld.com',
         salesManagerContact: 'manager@maniworld.com',
       })

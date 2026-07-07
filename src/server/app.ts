@@ -9,6 +9,7 @@ import {
   ResumeIntakeRegistry,
 } from '../modules/presentationCampaigns';
 import { OutreachProspectRegistry, OutreachScriptRegistry } from '../modules/prospectOutreach';
+import { CompliancePolicyRegistry } from '../modules/compliancePolicy';
 import { DutyScopeRegistry } from '../modules/dutyScope';
 import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../modules/contentStudio';
 import { createSocialPublisher, SocialPublisher } from '../modules/socialPublisher';
@@ -18,6 +19,7 @@ import { createCredentialsRouter } from './routes/credentialsRouter';
 import { createMarketsRouter } from './routes/marketsRouter';
 import { createPresentationRouter } from './routes/presentationRouter';
 import { createProspectOutreachRouter } from './routes/prospectOutreachRouter';
+import { createCompliancePolicyRouter } from './routes/compliancePolicyRouter';
 import { createDutyScopeRouter } from './routes/dutyScopeRouter';
 import { createContentStudioRouter } from './routes/contentStudioRouter';
 
@@ -30,6 +32,7 @@ export interface CreateAppOptions {
   landingPages?: LandingPageRegistry;
   prospects?: OutreachProspectRegistry;
   outreachScripts?: OutreachScriptRegistry;
+  compliancePolicies?: CompliancePolicyRegistry;
   dutyScopes?: DutyScopeRegistry;
   contentBriefs?: ContentBriefRegistry;
   contentPlans?: ContentPlanRegistry;
@@ -56,6 +59,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const landingPages = options.landingPages ?? new LandingPageRegistry();
   const prospects = options.prospects ?? new OutreachProspectRegistry();
   const outreachScripts = options.outreachScripts ?? new OutreachScriptRegistry();
+  const compliancePolicies = options.compliancePolicies ?? new CompliancePolicyRegistry();
   const dutyScopes = options.dutyScopes ?? new DutyScopeRegistry();
   const contentBriefs = options.contentBriefs ?? new ContentBriefRegistry();
   const contentPlans = options.contentPlans ?? new ContentPlanRegistry();
@@ -77,6 +81,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
     createPresentationRouter({ audienceProfiles, commissionModels, resumeIntakes, landingPages })
   );
   app.use('/api/outreach', auth, createProspectOutreachRouter({ prospects, scripts: outreachScripts }));
+  app.use('/api/compliance-policy', auth, createCompliancePolicyRouter({ policies: compliancePolicies }));
   app.use('/api/duty-scope', auth, createDutyScopeRouter({ dutyScopes, prospects }));
   app.use(
     '/api/content-studio',

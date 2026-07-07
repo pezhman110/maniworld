@@ -24,6 +24,7 @@
     <button class="tab-btn" data-tab="markets">Markets</button>
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
     <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
+    <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
   </nav>
@@ -278,6 +279,42 @@
         <label>Match score (0-100) <input id="pMatchScore" type="number" min="0" max="100" required /></label>
         <button type="submit">Add prospect</button>
       </form>
+    </section>
+    <section id="tab-compliance-policy" class="tab">
+      <h2>Compliance Policy</h2>
+      <p class="hint">
+        Every acquisition route (direct network search, job posting/campaign, and resume intake)
+        runs in parallel, but each is gated by an explicit, admin-editable list of "must" and
+        "must-not" rules - set once, then re-confirmed (same or revised) at the start of every
+        later outreach cycle. Define a separate "interview-conduct" policy for how the person
+        running online/in-person sessions for a route must behave.
+      </p>
+
+      <h3>Define a policy</h3>
+      <form id="compliancePolicyForm">
+        <label>Id <input id="cpId" type="text" placeholder="e.g. policy-direct-network" required /></label>
+        <label>Scope
+          <select id="cpScope">
+            <option value="route">route</option>
+            <option value="interview-conduct">interview-conduct</option>
+          </select>
+        </label>
+        <label>Route
+          <select id="cpRoute">
+            <option value="direct-network">direct-network</option>
+            <option value="job-posting">job-posting</option>
+            <option value="resume-intake">resume-intake</option>
+          </select>
+        </label>
+        <label>Audience profile id (optional) <input id="cpAudienceProfileId" type="text" /></label>
+        <label>Rules (one per line, prefix with "must:" or "must-not:")
+          <textarea id="cpRules" placeholder="must:Use the candidate's own real account&#10;must-not:Create or purchase fake/synthetic accounts&#10;must:Contact the previous employer before an offer" required></textarea>
+        </label>
+        <button type="submit">Define policy</button>
+      </form>
+
+      <h3>Policies</h3>
+      <div id="compliancePoliciesList" class="cards"></div>
     </section>
     <section id="tab-duty-scope" class="tab">
       <h2>Post-Contract Duty Scope</h2>

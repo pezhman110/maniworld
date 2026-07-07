@@ -93,6 +93,12 @@ describe('OutreachProspectRegistry', () => {
     expect(prospect.status).toBe('approved');
     expect(registry.listPendingApproval()).toHaveLength(0);
 
+    prospect = registry.recordReferenceCheck('prospect-1', {
+      contactedPreviousEmployer: true,
+      confirmedBy: 'hr@example.com',
+    });
+    expect(prospect.referenceCheck?.contactedPreviousEmployer).toBe(true);
+
     prospect = registry.markContractSent('prospect-1');
     expect(prospect.status).toBe('contract-sent');
 

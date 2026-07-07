@@ -22,6 +22,7 @@ function buildContractSentProspect(registry: OutreachProspectRegistry, id = 'pro
   registry.recordInPersonOutcome(id, 'completed');
   registry.submitForApproval(id, 'manager@example.com');
   registry.decideApproval(id, 'approved', 'boss@example.com');
+  registry.recordReferenceCheck(id, { contactedPreviousEmployer: true });
   return registry.markContractSent(id);
 }
 

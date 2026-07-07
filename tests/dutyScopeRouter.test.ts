@@ -30,6 +30,7 @@ describe('duty-scope API', () => {
     await request(app).post(`/api/outreach/prospects/${id}/in-person/outcome`).send({ outcome: 'completed' });
     await request(app).post(`/api/outreach/prospects/${id}/submit-for-approval`).send({ responsibleContact: 'mgr@example.com' });
     await request(app).post(`/api/outreach/prospects/${id}/decide-approval`).send({ decision: 'approved', decidedBy: 'boss@example.com' });
+    await request(app).post(`/api/outreach/prospects/${id}/reference-check`).send({ contactedPreviousEmployer: true });
     await request(app).post(`/api/outreach/prospects/${id}/send-contract`);
   }
 

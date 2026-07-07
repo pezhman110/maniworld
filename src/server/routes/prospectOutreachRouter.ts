@@ -145,6 +145,14 @@ export function createProspectOutreachRouter(deps: {
     }
   });
 
+  router.post('/prospects/:id/reference-check', (req, res) => {
+    try {
+      res.json({ prospect: prospects.recordReferenceCheck(req.params.id, req.body ?? {}) });
+    } catch (err) {
+      handleError(res, err, 404);
+    }
+  });
+
   router.post('/prospects/:id/send-contract', (req, res) => {
     try {
       const prospect = prospects.markContractSent(req.params.id);

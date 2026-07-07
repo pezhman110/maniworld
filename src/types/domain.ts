@@ -659,6 +659,8 @@ export interface HireDecisionRecord {
   decidedBy: string;
   decidedAt: number;
   offerLetterText?: string;
+  /** True once the candidate's previous employer was contacted/confirmed; required before a "hired" decision. */
+  referenceCheckConfirmed?: boolean;
 }
 
 /** A signed commission contract for a hired freelancer, derived from a RecruitmentPlan. */
@@ -715,6 +717,16 @@ export interface StaffAccount {
  */
 export type AudienceRoute = 'direct-network' | 'job-posting' | 'resume-intake';
 
+/**
+ * How a lead/candidate first entered the pipeline. Used to automatically
+ * derive which `AudienceRoute` (and therefore which policy and workflow)
+ * they should be worked through, instead of requiring a manual pick:
+ *  - 'network-search': found by searching a social/professional network for matching accounts.
+ *  - 'job-application': applied to a published job ad / campaign / single-page landing site.
+ *  - 'resume-submission': submitted (or had submitted on their behalf) a resume/CV or other data.
+ */
+export type IntakeSource = 'network-search' | 'job-application' | 'resume-submission';
+
 /** The working-hours window (24h, local) allowed for outreach/visits for a given group. */
 export interface WorkingHoursWindow {
   startHour: number;
@@ -739,6 +751,48 @@ export interface AudienceProfile {
   dailyCap?: number;
   /** Optional allowed working-hours window for outreach/visits for this group. */
   workingHours?: WorkingHoursWindow;
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Compliance/policy types.
+ *
+ * Each acquisition route (and, separately, how any interviewer/session
+ * host must conduct themselves) is governed by an explicit, admin-editable
+ * list of "must" and "must-not" statements. The list is set once, then
+ * re-confirmed (unchanged or revised) at the start of every later outreach
+ * cycle, never silently assumed to still apply.
+ */
+export type CompliancePolicyRuleKind = 'must' | 'must-not';
+
+/** A single allowed ("must") or forbidden ("must-not") action/requirement. */
+export interface CompliancePolicyRule {
+  id: string;
+  kind: CompliancePolicyRuleKind;
+  text: string;
+}
+
+/**
+ * What a policy governs:
+ *  - 'route': the must/must-not rules for a whole acquisition route (optionally narrowed to one audience profile).
+ *  - 'interview-conduct': how the person running online/in-person sessions for that route must behave.
+ */
+export type CompliancePolicyScope = 'route' | 'interview-conduct';
+
+/** A versioned, admin-editable must/must-not policy, re-confirmed at the start of every outreach cycle. */
+export interface CompliancePolicy {
+  id: string;
+  scope: CompliancePolicyScope;
+  /** Which acquisition route this policy applies to. */
+  route: AudienceRoute;
+  /** Optionally narrows the policy to a single audience profile instead of the whole route. */
+  audienceProfileId?: string;
+  rules: CompliancePolicyRule[];
+  /** Bumped every time the rule set is revised (not on a same-as-before re-confirmation). */
+  version: number;
+  /** When the rules were last confirmed (same or revised) as still in effect. */
+  lastConfirmedAt: number;
   createdAt: number;
   active: boolean;
 }
@@ -855,6 +909,14 @@ export interface ApprovalRecord {
   decidedAt?: number;
 }
 
+/** The mandatory pre-hire check that the candidate's previous employer was contacted, required before a contract is sent. */
+export interface ReferenceCheckRecord {
+  contactedPreviousEmployer: boolean;
+  confirmedAt: number;
+  confirmedBy?: string;
+  notes?: string;
+}
+
 /**
  * A candidate account found on a social/professional network (or banking
  * portal) while searching for matches against a recruitment plan
@@ -879,6 +941,8 @@ export interface Prospect {
   onlineSession?: OnlineSessionInvite;
   inPersonVisit?: InPersonVisit;
   approval?: ApprovalRecord;
+  /** Must be recorded (with `contactedPreviousEmployer: true`) before a contract can be sent. */
+  referenceCheck?: ReferenceCheckRecord;
   notes?: string;
   createdAt: number;
 }

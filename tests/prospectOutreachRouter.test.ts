@@ -83,10 +83,51 @@ describe('prospect outreach API', () => {
     expect(approveRes.status).toBe(200);
     expect(approveRes.body.prospect.status).toBe('approved');
 
+    const referenceCheckRes = await request(app)
+      .post('/api/outreach/prospects/prospect-1/reference-check')
+      .send({ contactedPreviousEmployer: true, confirmedBy: 'hr@example.com' });
+    expect(referenceCheckRes.status).toBe(200);
+    expect(referenceCheckRes.body.prospect.referenceCheck.contactedPreviousEmployer).toBe(true);
+
     const contractRes = await request(app).post('/api/outreach/prospects/prospect-1/send-contract');
     expect(contractRes.status).toBe(200);
     expect(contractRes.body.prospect.status).toBe('contract-sent');
     expect(contractRes.body.contractText).toContain('Jane Doe');
+  });
+
+  it('rejects sending a contract before the reference check is confirmed', async () => {
+    const app = buildApp();
+    await request(app).post('/api/outreach/prospects').send({
+      id: 'prospect-2',
+      planId: 'plan-1',
+      platform: 'instagram',
+      accountHandle: '@no-ref-check',
+      matchScore: 95,
+    });
+    await request(app).post('/api/outreach/prospects/prospect-2/qualify');
+    await request(app).post('/api/outreach/prospects/prospect-2/platform-outreach').send({ message: 'Hi!' });
+    await request(app).post('/api/outreach/prospects/prospect-2/convert-contact').send({ email: 'x@example.com' });
+    await request(app)
+      .post('/api/outreach/prospects/prospect-2/direct-outreach')
+      .send({ channel: 'email', message: 'Follow up.' });
+    await request(app)
+      .post('/api/outreach/prospects/prospect-2/online-session/invite')
+      .send({ scheduledAt: Date.now(), script: 'script' });
+    await request(app).post('/api/outreach/prospects/prospect-2/online-session/outcome').send({ outcome: 'completed' });
+    await request(app)
+      .post('/api/outreach/prospects/prospect-2/in-person/invite')
+      .send({ locationId: 'salon-1', scheduledAt: new Date('2026-01-05T12:00:00').getTime() });
+    await request(app).post('/api/outreach/prospects/prospect-2/in-person/outcome').send({ outcome: 'completed' });
+    await request(app)
+      .post('/api/outreach/prospects/prospect-2/submit-for-approval')
+      .send({ responsibleContact: 'manager@example.com' });
+    await request(app)
+      .post('/api/outreach/prospects/prospect-2/decide-approval')
+      .send({ decision: 'approved', decidedBy: 'boss@example.com' });
+
+    const res = await request(app).post('/api/outreach/prospects/prospect-2/send-contract');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/reference check/i);
   });
 
   it('returns 404 for an unknown prospect', async () => {

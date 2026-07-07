@@ -126,12 +126,19 @@ export class HireDecisionRegistry {
     locationId?: string;
     hrContact: string;
     salesManagerContact: string;
+    /** Must be true - previous employer contacted/confirmed - before a "hired" decision can be recorded. */
+    referenceCheckConfirmed?: boolean;
     now?: number;
   }): { record: HireDecisionRecord; notifications: HireNotification[] } {
     const now = params.now ?? Date.now();
 
     if (params.decision === 'hired' && !params.contract) {
       throw new Error('A signed contract is required to record a "hired" decision.');
+    }
+    if (params.decision === 'hired' && !params.referenceCheckConfirmed) {
+      throw new Error(
+        'The previous-employer reference check must be confirmed ("referenceCheckConfirmed: true") before a "hired" decision can be recorded.'
+      );
     }
 
     const offerLetterText =
@@ -145,6 +152,7 @@ export class HireDecisionRegistry {
       decidedBy: params.decidedBy,
       decidedAt: now,
       offerLetterText,
+      referenceCheckConfirmed: params.referenceCheckConfirmed,
     };
     this.decisions.set(params.freelancer.id, record);
 

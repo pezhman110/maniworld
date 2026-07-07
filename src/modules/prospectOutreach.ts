@@ -5,6 +5,7 @@ import {
   OutreachPlatform,
   Prospect,
   ProspectStatus,
+  ReferenceCheckRecord,
 } from '../types/domain';
 
 /**
@@ -284,10 +285,41 @@ export class OutreachProspectRegistry {
     return prospect;
   }
 
-  /** Marks the contract as sent once the responsible person has approved the prospect. */
+  /**
+   * Records the mandatory pre-hire reference check - that the candidate's
+   * previous employer/workplace was contacted - required before a contract
+   * can be sent. Allowed once the prospect has been approved.
+   */
+  recordReferenceCheck(
+    id: string,
+    params: { contactedPreviousEmployer: boolean; confirmedBy?: string; notes?: string },
+    now: number = Date.now()
+  ): Prospect {
+    const prospect = this.mustGet(id);
+    this.assertStatus(prospect, ['approved']);
+    const referenceCheck: ReferenceCheckRecord = {
+      contactedPreviousEmployer: params.contactedPreviousEmployer,
+      confirmedAt: now,
+      confirmedBy: params.confirmedBy,
+      notes: params.notes,
+    };
+    prospect.referenceCheck = referenceCheck;
+    return prospect;
+  }
+
+  /**
+   * Marks the contract as sent once the responsible person has approved the
+   * prospect and the mandatory previous-employer reference check has been
+   * recorded and confirmed - a contract can never be sent without it.
+   */
   markContractSent(id: string): Prospect {
     const prospect = this.mustGet(id);
     this.assertStatus(prospect, ['approved']);
+    if (!prospect.referenceCheck || !prospect.referenceCheck.contactedPreviousEmployer) {
+      throw new Error(
+        `Prospect "${id}" cannot have a contract sent until the previous employer has been contacted and the reference check recorded.`
+      );
+    }
     prospect.status = 'contract-sent';
     return prospect;
   }
