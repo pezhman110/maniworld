@@ -102,7 +102,7 @@ Beyond the pure pipeline modules above, the repository now also includes:
 ```bash
 npm install
 npm run build
-MW_ADMIN_API_KEY=change-me MW_CREDENTIALS_KEY=$(openssl rand -hex 32) npm run start:server
+MW_ADMIN_API_KEY=change-me MW_CREDENTIALS_KEY=$(openssl rand -hex 32) npm start
 # open http://localhost:3000/  (redirects to the entrance/sign-in page, then /dashboard)
 ```
 
@@ -122,7 +122,7 @@ domain only requires:
 1. Build once: `npm install && npm run build`.
 2. Set the required environment variables on the host (see table below) —
    nothing else needs manual configuration.
-3. Start the process: `npm run start:server` (listens on `PORT`, default
+3. Start the process: `npm start` (or `npm run start:server`; listens on `PORT`, default
    `3000`).
 4. Point your domain/reverse proxy (Nginx, a PaaS load balancer, etc.) at
    that port. `GET /` redirects to `/entrance/` (sign-in), which then sends

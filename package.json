@@ -2,12 +2,13 @@
   "name": "maniworld-crm",
   "version": "0.1.0",
   "description": "Lead-to-booking automation pipeline (CRM) for Mani World",
-  "main": "dist/index.js",
+  "main": "dist/src/server/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "jest",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "start:server": "node dist/src/server/index.js"
+    "start": "node dist/src/server/index.js",
+    "start:server": "npm start"
   },
   "license": "MIT",
   "devDependencies": {
