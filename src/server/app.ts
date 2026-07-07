@@ -12,8 +12,18 @@ import { OutreachProspectRegistry, OutreachScriptRegistry } from '../modules/pro
 import { CompliancePolicyRegistry } from '../modules/compliancePolicy';
 import { ProjectRegistry, AIPersonaRegistry } from '../modules/project';
 import { DutyScopeRegistry } from '../modules/dutyScope';
-import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../modules/contentStudio';
-import { createSocialPublisher, SocialPublisher } from '../modules/socialPublisher';
+import {
+  ContentBriefRegistry,
+  ContentPlanRegistry,
+  InstagramCompanyAdRegistry,
+  TrendResearchRegistry,
+} from '../modules/contentStudio';
+import {
+  createInstagramAdPublisher,
+  createSocialPublisher,
+  InstagramAdPublisher,
+  SocialPublisher,
+} from '../modules/socialPublisher';
 import { PagesWebsitesRegistry } from '../modules/pagesWebsites';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
@@ -44,8 +54,10 @@ export interface CreateAppOptions {
   contentBriefs?: ContentBriefRegistry;
   contentPlans?: ContentPlanRegistry;
   contentTrends?: TrendResearchRegistry;
+  instagramAds?: InstagramCompanyAdRegistry;
   pagesWebsites?: PagesWebsitesRegistry;
   publishContent?: SocialPublisher;
+  publishInstagramAd?: InstagramAdPublisher;
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
   adminApiKey?: string;
@@ -74,8 +86,10 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const contentBriefs = options.contentBriefs ?? new ContentBriefRegistry();
   const contentPlans = options.contentPlans ?? new ContentPlanRegistry();
   const contentTrends = options.contentTrends ?? new TrendResearchRegistry();
+  const instagramAds = options.instagramAds ?? new InstagramCompanyAdRegistry();
   const pagesWebsites = options.pagesWebsites ?? new PagesWebsitesRegistry();
   const publishContent = options.publishContent ?? createSocialPublisher();
+  const publishInstagramAd = options.publishInstagramAd ?? createInstagramAdPublisher();
   const testConnection = options.testConnection ?? createConnectionTester();
 
   const app = express();
@@ -108,8 +122,10 @@ export function createApp(options: CreateAppOptions = {}): Express {
       briefs: contentBriefs,
       plans: contentPlans,
       trends: contentTrends,
+      instagramAds,
       credentials: credentialsStore,
       publish: publishContent,
+      publishInstagramAd,
     })
   );
   app.use('/api/pages-websites', auth, createPagesWebsitesRouter(pagesWebsites));

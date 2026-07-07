@@ -6,6 +6,10 @@ import {
   ContentItemStatus,
   ContentPlatform,
   ContentType,
+  InstagramCompanyAd,
+  InstagramAdCallToAction,
+  InstagramAdObjective,
+  InstagramAdStatus,
   TrendNote,
 } from '../types/domain';
 import { InMemoryRepository, Repository } from './persistence';
@@ -225,6 +229,107 @@ export class ContentPlanRegistry {
     );
     const updated: ContentItem = { ...item, destinations };
     await this.repo.save(itemId, updated);
+    return updated;
+  }
+}
+
+const DEFAULT_INSTAGRAM_AD_COMPLIANCE_NOTES = [
+  'Use only a company-owned Instagram business/creator account connected to Meta Business Manager.',
+  'Launch through the official Meta Marketing API or Meta Ads Manager; never automate logins, scraping, or fake engagement.',
+  'Make sure the ad creative, landing page, targeting, and budget follow Meta Advertising Standards and local law.',
+];
+
+function normalizeStringList(values: string[] | undefined): string[] {
+  return (values ?? []).map((value) => value.trim()).filter(Boolean);
+}
+
+function requirePositiveInteger(value: number, field: string): number {
+  if (!Number.isInteger(value) || value <= 0) throw new Error(`"${field}" must be a positive integer.`);
+  return value;
+}
+
+function normalizeCurrency(value: string | undefined): string {
+  const currency = requireNonEmpty(value, 'currency').trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error('"currency" must be a 3-letter ISO currency code.');
+  return currency;
+}
+
+export class InstagramCompanyAdRegistry {
+  constructor(private repo: Repository<InstagramCompanyAd> = new InMemoryRepository()) {}
+
+  async create(params: {
+    id: string;
+    companyName: string;
+    instagramHandle?: string;
+    objective: InstagramAdObjective;
+    caption: string;
+    mediaUrl: string;
+    landingUrl: string;
+    dailyBudgetMinor: number;
+    currency: string;
+    targetLocations?: string[];
+    targetInterests?: string[];
+    callToAction?: InstagramAdCallToAction;
+    now?: number;
+  }): Promise<InstagramCompanyAd> {
+    requireNonEmpty(params.id, 'id');
+    requireNonEmpty(params.companyName, 'companyName');
+    requireNonEmpty(params.caption, 'caption');
+    requireNonEmpty(params.mediaUrl, 'mediaUrl');
+    requireNonEmpty(params.landingUrl, 'landingUrl');
+    if (await this.repo.getById(params.id)) {
+      throw new Error(`An Instagram ad with id "${params.id}" already exists.`);
+    }
+    const ad: InstagramCompanyAd = {
+      id: params.id,
+      companyName: params.companyName,
+      instagramHandle: params.instagramHandle?.trim() || undefined,
+      objective: params.objective,
+      caption: params.caption,
+      mediaUrl: params.mediaUrl,
+      landingUrl: params.landingUrl,
+      dailyBudgetMinor: requirePositiveInteger(params.dailyBudgetMinor, 'dailyBudgetMinor'),
+      currency: normalizeCurrency(params.currency),
+      targetLocations: normalizeStringList(params.targetLocations),
+      targetInterests: normalizeStringList(params.targetInterests),
+      callToAction: params.callToAction ?? 'LEARN_MORE',
+      status: 'draft',
+      complianceNotes: [...DEFAULT_INSTAGRAM_AD_COMPLIANCE_NOTES],
+      createdAt: params.now ?? Date.now(),
+    };
+    await this.repo.save(ad.id, ad);
+    return ad;
+  }
+
+  async get(id: string): Promise<InstagramCompanyAd | undefined> {
+    return this.repo.getById(id);
+  }
+
+  async list(): Promise<InstagramCompanyAd[]> {
+    return this.repo.list();
+  }
+
+  async listFallbackQueue(): Promise<InstagramCompanyAd[]> {
+    const all = await this.repo.list();
+    return all.filter((ad) => ad.status === 'manual-fallback');
+  }
+
+  async updateSubmission(
+    id: string,
+    patch: {
+      status: InstagramAdStatus;
+      submittedAt?: number;
+      failureReason?: string;
+      metaCampaignId?: string;
+      metaAdSetId?: string;
+      metaCreativeId?: string;
+      metaAdId?: string;
+    }
+  ): Promise<InstagramCompanyAd> {
+    const ad = await this.repo.getById(id);
+    if (!ad) throw new Error(`Instagram ad "${id}" not found.`);
+    const updated: InstagramCompanyAd = { ...ad, ...patch };
+    await this.repo.save(id, updated);
     return updated;
   }
 }

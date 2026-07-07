@@ -1,7 +1,12 @@
 import { Router } from 'express';
-import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../../modules/contentStudio';
+import {
+  ContentBriefRegistry,
+  ContentPlanRegistry,
+  InstagramCompanyAdRegistry,
+  TrendResearchRegistry,
+} from '../../modules/contentStudio';
 import { IntegrationCredentialsStore } from '../../modules/credentialsStore';
-import { publishToWebsite, SocialPublisher } from '../../modules/socialPublisher';
+import { InstagramAdPublisher, publishToWebsite, SocialPublisher } from '../../modules/socialPublisher';
 import { ContentPlatform } from '../../types/domain';
 
 let autoId = 0;
@@ -27,11 +32,13 @@ export function createContentStudioRouter(deps: {
   briefs: ContentBriefRegistry;
   plans: ContentPlanRegistry;
   trends: TrendResearchRegistry;
+  instagramAds: InstagramCompanyAdRegistry;
   credentials: IntegrationCredentialsStore;
   publish: SocialPublisher;
+  publishInstagramAd: InstagramAdPublisher;
 }): Router {
   const router = Router();
-  const { briefs, plans, trends, credentials, publish } = deps;
+  const { briefs, plans, trends, instagramAds, credentials, publish, publishInstagramAd } = deps;
 
   const handleError = (res: import('express').Response, err: unknown, status = 400) => {
     res.status(status).json({ error: err instanceof Error ? err.message : String(err) });
@@ -104,6 +111,47 @@ export function createContentStudioRouter(deps: {
 
   router.get('/fallback-queue', async (_req, res) => {
     res.json({ items: await plans.listFallbackQueue() });
+  });
+
+  // Instagram company ads: planned here, submitted only through Meta Marketing API for owned accounts.
+  router.get('/instagram-ads', async (_req, res) => {
+    res.json({ ads: await instagramAds.list() });
+  });
+
+  router.post('/instagram-ads', async (req, res) => {
+    try {
+      const ad = await instagramAds.create({ id: req.body?.id ?? nextId('ig-ad'), ...req.body });
+      res.status(201).json({ ad });
+    } catch (err) {
+      handleError(res, err);
+    }
+  });
+
+  router.get('/instagram-ads/fallback-queue', async (_req, res) => {
+    res.json({ ads: await instagramAds.listFallbackQueue() });
+  });
+
+  router.post('/instagram-ads/:id/submit', async (req, res) => {
+    const ad = await instagramAds.get(req.params.id);
+    if (!ad) {
+      res.status(404).json({ error: `Instagram ad "${req.params.id}" not found.` });
+      return;
+    }
+    try {
+      const result = await publishInstagramAd(await credentials.get('instagram'), ad);
+      const updated = await instagramAds.updateSubmission(ad.id, {
+        status: result.status,
+        failureReason: result.status === 'manual-fallback' ? result.message : undefined,
+        submittedAt: result.status === 'submitted' ? Date.now() : undefined,
+        metaCampaignId: result.metaCampaignId,
+        metaAdSetId: result.metaAdSetId,
+        metaCreativeId: result.metaCreativeId,
+        metaAdId: result.metaAdId,
+      });
+      res.json({ ad: updated, result });
+    } catch (err) {
+      handleError(res, err, 500);
+    }
   });
 
   // Publishing a single item to a single destination (a social platform, or "website").

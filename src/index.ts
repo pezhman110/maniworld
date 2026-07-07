@@ -41,3 +41,5 @@ export * from './modules/freelancerContracts';
 export * from './modules/presentationCampaigns';
 export * from './modules/prospectOutreach';
 export * from './modules/dutyScope';
+export * from './modules/contentStudio';
+export * from './modules/socialPublisher';

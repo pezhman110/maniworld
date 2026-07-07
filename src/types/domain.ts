@@ -1164,3 +1164,44 @@ export interface ContentItem {
   destinations: ContentDestination[];
   createdAt: number;
 }
+
+export type InstagramAdObjective = 'traffic' | 'leads' | 'messages' | 'awareness';
+
+export type InstagramAdStatus = 'draft' | 'submitted' | 'manual-fallback';
+
+export type InstagramAdCallToAction =
+  | 'LEARN_MORE'
+  | 'SIGN_UP'
+  | 'CONTACT_US'
+  | 'BOOK_TRAVEL'
+  | 'GET_OFFER'
+  | 'SEND_MESSAGE';
+
+/**
+ * A compliant Instagram company-ad request for an account the business already owns.
+ * Submission is handled only through Meta Marketing API credentials; otherwise it is
+ * kept in a manual-fallback queue for a human to launch in Meta Ads Manager.
+ */
+export interface InstagramCompanyAd {
+  id: string;
+  companyName: string;
+  instagramHandle?: string;
+  objective: InstagramAdObjective;
+  caption: string;
+  mediaUrl: string;
+  landingUrl: string;
+  dailyBudgetMinor: number;
+  currency: string;
+  targetLocations: string[];
+  targetInterests: string[];
+  callToAction: InstagramAdCallToAction;
+  status: InstagramAdStatus;
+  complianceNotes: string[];
+  createdAt: number;
+  submittedAt?: number;
+  failureReason?: string;
+  metaCampaignId?: string;
+  metaAdSetId?: string;
+  metaCreativeId?: string;
+  metaAdId?: string;
+}
