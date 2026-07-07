@@ -84,6 +84,7 @@ function applyApiKey(key, status) {
   refreshContentFallbackQueue();
   refreshInstagramAds();
   refreshInstagramAdsFallbackQueue();
+  refreshInstagramGrowth();
   refreshPagesWebsiteCatalog();
   refreshPagesWebsites();
   refreshPagesImports();
@@ -1178,6 +1179,219 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+const INSTAGRAM_GROWTH_KPIS = [
+  ['totalFound', 'Accounts found'],
+  ['classified', 'Classified'],
+  ['publicSignalsFound', 'Public signals'],
+  ['publicContactFound', 'Public contacts'],
+  ['eligible', 'Eligible'],
+  ['engaged', 'Engaged'],
+  ['permissionSent', 'Permission sent'],
+  ['consented', 'Opted-in'],
+  ['converted', 'Converted'],
+  ['booked', 'Booked'],
+  ['sellerHandoff', 'Seller handoff'],
+  ['archived', 'Archived'],
+  ['optedOut', 'Opted-out'],
+  ['blocked', 'Blocked'],
+];
+
+function renderInstagramGrowthAccount(account) {
+  const contacts = account.contacts
+    .map((c) => `${escapeHtml(c.kind)}: ${escapeHtml(c.value)} (${escapeHtml(c.source)}, proof: ${escapeHtml(c.proof)})`)
+    .join('<br />');
+  const methods = account.eligibility.allowedMethods.map(escapeHtml).join(', ') || '—';
+  return `<div class="card">
+    <h4>@${escapeHtml(account.handle)} <span class="status ${account.eligibility.status === 'allowed' ? 'connected' : account.eligibility.status === 'blocked' ? 'invalid' : 'unverified'}">${escapeHtml(account.stage)}</span></h4>
+    <div>ID: <code>${escapeHtml(account.id)}</code></div>
+    <div>Type: ${escapeHtml(account.accountType)} · Source: ${escapeHtml(account.source)}</div>
+    <div>Bio: ${escapeHtml(account.signals.bio || '—')}</div>
+    <div>Website: ${escapeHtml(account.signals.website || '—')}</div>
+    <div>Contacts:<br />${contacts || '—'}</div>
+    <div>Legal gate: <strong>${escapeHtml(account.eligibility.status)}</strong> — ${escapeHtml(account.eligibility.reason)}</div>
+    <div>Allowed: ${methods}</div>
+    <div>Consent: ${account.consent.map((c) => escapeHtml(c.state)).join(', ') || 'none'}</div>
+    <div>Next action: ${escapeHtml(nextInstagramGrowthAction(account))}</div>
+  </div>`;
+}
+
+function nextInstagramGrowthAction(account) {
+  if (account.stage === 'opted-out' || account.stage === 'blocked') return 'Do not contact.';
+  if (account.stage === 'archived') return 'No action unless manager reopens manually.';
+  if (account.eligibility.status === 'needs-review') return 'Warm up, collect proof/source, or queue legal human review.';
+  if (account.stage === 'permission-message-ready') return 'Send permission-first message.';
+  if (account.stage === 'permission-message-sent') return 'Wait for reply; stop if no reply.';
+  if (account.stage === 'consented') return 'Convert sourced contact or book meeting.';
+  if (account.stage === 'converted-contact') return 'Connect to booking / meeting / CRM.';
+  return 'Choose the next compliant funnel action.';
+}
+
+async function refreshInstagramGrowth() {
+  const metricsContainer = document.getElementById('instagramGrowthMetrics');
+  const accountsContainer = document.getElementById('instagramGrowthAccounts');
+  const handoffsContainer = document.getElementById('instagramGrowthHandoffs');
+  const archiveContainer = document.getElementById('instagramGrowthArchive');
+  if (!metricsContainer || !accountsContainer || !handoffsContainer || !archiveContainer) return;
+  try {
+    const [{ metrics }, { accounts }, { handoffs }, archive] = await Promise.all([
+      apiFetch('/instagram-growth/metrics'),
+      apiFetch('/instagram-growth/accounts'),
+      apiFetch('/instagram-growth/handoffs'),
+      apiFetch('/instagram-growth/archive'),
+    ]);
+    metricsContainer.innerHTML = INSTAGRAM_GROWTH_KPIS.map(
+      ([key, label]) => `<div class="kpi-card"><div class="kpi-value">${metrics[key] || 0}</div><div class="kpi-label">${label}</div></div>`
+    ).join('');
+    accountsContainer.innerHTML = accounts.length
+      ? accounts.map(renderInstagramGrowthAccount).join('')
+      : '<p class="hint">No Instagram accounts added yet.</p>';
+    handoffsContainer.innerHTML = handoffs.length
+      ? handoffs
+          .map(
+            (h) => `<div class="card">
+              <h4>${escapeHtml(h.assignedSeller)} → ${escapeHtml(h.allowedMethod)}</h4>
+              <div>Account: <code>${escapeHtml(h.accountId)}</code></div>
+              <div>Status: ${escapeHtml(h.status)} · Attempts: ${h.attempts}/${h.maxAttempts}</div>
+              <div>Manual only: ${h.manualOnly ? 'yes' : 'no'} · No automation: ${h.noAutomation ? 'yes' : 'no'}</div>
+              <div>Reason: ${escapeHtml(h.reason)}</div>
+              <div>Script: ${escapeHtml(h.script)}</div>
+              <div>Deadline: ${new Date(h.deadlineAt).toLocaleDateString()}</div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No seller handoffs queued.</p>';
+    archiveContainer.innerHTML = archive.accounts.length
+      ? `<h4>Archive / Stop List</h4>${archive.accounts.map(renderInstagramGrowthAccount).join('')}`
+      : '<p class="hint">No archived, opted-out, or blocked Instagram accounts.</p>';
+  } catch (err) {
+    metricsContainer.innerHTML = `<p class="hint">Failed to load Instagram Growth: ${err.message}</p>`;
+  }
+}
+
+function setupInstagramGrowthForms() {
+  document.getElementById('instagramGrowthAccountForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const matchScoreRaw = document.getElementById('igMatchScore').value;
+    try {
+      await apiFetch('/instagram-growth/accounts', {
+        method: 'POST',
+        body: JSON.stringify({
+          handle: document.getElementById('igHandle').value,
+          displayName: document.getElementById('igDisplayName').value || undefined,
+          source: document.getElementById('igSource').value,
+          accountType: document.getElementById('igAccountType').value,
+          matchScore: matchScoreRaw ? Number(matchScoreRaw) : undefined,
+        }),
+      });
+      e.target.reset();
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById('instagramGrowthSignalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch(`/instagram-growth/accounts/${encodeURIComponent(document.getElementById('igsAccountId').value)}/signals`, {
+        method: 'POST',
+        body: JSON.stringify({
+          bio: document.getElementById('igsBio').value,
+          category: document.getElementById('igsCategory').value,
+          website: document.getElementById('igsWebsite').value,
+        }),
+      });
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById('instagramGrowthContactForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch(`/instagram-growth/accounts/${encodeURIComponent(document.getElementById('igcAccountId').value)}/contacts`, {
+        method: 'POST',
+        body: JSON.stringify({
+          kind: document.getElementById('igcKind').value,
+          value: document.getElementById('igcValue').value,
+          source: document.getElementById('igcSource').value,
+          proof: document.getElementById('igcProof').value,
+          publicBusinessContact: document.getElementById('igcPublicBusiness').checked,
+        }),
+      });
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById('instagramGrowthActionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const action = e.submitter.dataset.action;
+    const accountId = encodeURIComponent(document.getElementById('igaAccountId').value);
+    const proof = document.getElementById('igaProof').value || 'dashboard note';
+    const script = document.getElementById('igaScript').value;
+    const path = document.getElementById('igaWarmupPath').value;
+    const endpoints = {
+      warmup: [`/instagram-growth/accounts/${accountId}/warmup`, { path }],
+      prepare: [`/instagram-growth/accounts/${accountId}/permission/prepare`, { script }],
+      send: [`/instagram-growth/accounts/${accountId}/permission/send`, {}],
+      consent: [`/instagram-growth/accounts/${accountId}/reply`, { consentGranted: true, proof }],
+      convert: [`/instagram-growth/accounts/${accountId}/convert-contact`, {}],
+      booking: [`/instagram-growth/accounts/${accountId}/booking-ready`, {}],
+      archive: [`/instagram-growth/accounts/${accountId}/archive`, { reason: proof }],
+      optout: [`/instagram-growth/accounts/${accountId}/opt-out`, { proof }],
+    };
+    try {
+      const [url, body] = endpoints[action];
+      await apiFetch(url, { method: 'POST', body: JSON.stringify(body) });
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById('instagramGrowthHandoffForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch(`/instagram-growth/accounts/${encodeURIComponent(document.getElementById('ighAccountId').value)}/handoff`, {
+        method: 'POST',
+        body: JSON.stringify({
+          assignedSeller: document.getElementById('ighSeller').value,
+          allowedMethod: document.getElementById('ighMethod').value,
+          reason: document.getElementById('ighReason').value,
+          script: document.getElementById('ighScript').value,
+          maxAttempts: Number(document.getElementById('ighMaxAttempts').value),
+          deadlineAt: new Date(document.getElementById('ighDeadline').value).getTime(),
+          manualOnly: true,
+          noAutomation: true,
+          sellerAccountVerified: true,
+        }),
+      });
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  document.getElementById('instagramGrowthSellerActionForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch(`/instagram-growth/accounts/${encodeURIComponent(document.getElementById('ighaAccountId').value)}/handoff/actions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          outcome: document.getElementById('ighaOutcome').value,
+          note: document.getElementById('ighaNote').value,
+        }),
+      });
+      refreshInstagramGrowth();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 function setupTrendForm() {
   document.getElementById('trendForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1993,6 +2207,7 @@ setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
 setupInstagramAdForm();
+setupInstagramGrowthForms();
 setupPagesWebsiteForm();
 setupPagesImportForm();
 refreshMissionGroups();
@@ -2012,6 +2227,7 @@ refreshContentBriefs();
 refreshContentFallbackQueue();
 refreshInstagramAds();
 refreshInstagramAdsFallbackQueue();
+refreshInstagramGrowth();
 refreshPagesWebsiteCatalog();
 refreshPagesWebsites();
 refreshPagesImports();

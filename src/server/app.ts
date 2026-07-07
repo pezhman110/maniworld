@@ -25,6 +25,7 @@ import {
   SocialPublisher,
 } from '../modules/socialPublisher';
 import { PagesWebsitesRegistry } from '../modules/pagesWebsites';
+import { InstagramLegalGrowthRegistry } from '../modules/instagramLegalGrowth';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { TRANSLATIONS } from '../modules/i18n';
@@ -37,6 +38,7 @@ import { createProjectRouter } from './routes/projectRouter';
 import { createDutyScopeRouter } from './routes/dutyScopeRouter';
 import { createContentStudioRouter } from './routes/contentStudioRouter';
 import { createPagesWebsitesRouter, createPublicPagesRouter } from './routes/pagesWebsitesRouter';
+import { createInstagramGrowthRouter } from './routes/instagramGrowthRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -56,6 +58,7 @@ export interface CreateAppOptions {
   contentTrends?: TrendResearchRegistry;
   instagramAds?: InstagramCompanyAdRegistry;
   pagesWebsites?: PagesWebsitesRegistry;
+  instagramGrowth?: InstagramLegalGrowthRegistry;
   publishContent?: SocialPublisher;
   publishInstagramAd?: InstagramAdPublisher;
   testConnection?: ConnectionTester;
@@ -88,6 +91,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const contentTrends = options.contentTrends ?? new TrendResearchRegistry();
   const instagramAds = options.instagramAds ?? new InstagramCompanyAdRegistry();
   const pagesWebsites = options.pagesWebsites ?? new PagesWebsitesRegistry();
+  const instagramGrowth = options.instagramGrowth ?? new InstagramLegalGrowthRegistry();
   const publishContent = options.publishContent ?? createSocialPublisher();
   const publishInstagramAd = options.publishInstagramAd ?? createInstagramAdPublisher();
   const testConnection = options.testConnection ?? createConnectionTester();
@@ -129,6 +133,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
     })
   );
   app.use('/api/pages-websites', auth, createPagesWebsitesRouter(pagesWebsites));
+  app.use('/api/instagram-growth', auth, createInstagramGrowthRouter({ instagramGrowth }));
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));

@@ -1205,3 +1205,183 @@ export interface InstagramCompanyAd {
   metaCreativeId?: string;
   metaAdId?: string;
 }
+
+/**
+ * Instagram Legal Growth Engine.
+ *
+ * Models a consent-first Instagram account funnel: account discovery, public
+ * signal/contact source ledger, legal eligibility checks, warm-up triggers,
+ * permission-first messaging, opt-in conversion, and a strictly manual seller
+ * handoff queue for accounts the automated/legal paths cannot continue.
+ */
+
+export type InstagramGrowthAccountType = 'unknown' | 'personal' | 'business' | 'creator' | 'influencer' | 'company';
+
+export type InstagramGrowthStage =
+  | 'found'
+  | 'classified'
+  | 'public-signal-collected'
+  | 'contact-enriched'
+  | 'warmup-needed'
+  | 'ad-retargeting'
+  | 'comment-triggered'
+  | 'story-replied'
+  | 'dm-keyword-received'
+  | 'mention-triggered'
+  | 'permission-message-ready'
+  | 'permission-message-sent'
+  | 'replied'
+  | 'consented'
+  | 'converted-contact'
+  | 'booking-ready'
+  | 'human-handoff-needed'
+  | 'seller-contacted'
+  | 'seller-success'
+  | 'seller-no-response'
+  | 'archived'
+  | 'opted-out'
+  | 'blocked';
+
+export type InstagramContactKind = 'email' | 'phone' | 'whatsapp' | 'website' | 'form' | 'other-social';
+
+export type InstagramContactSource =
+  | 'instagram_bio_public_contact'
+  | 'contact_button'
+  | 'website_public_contact'
+  | 'landing_form'
+  | 'inbound_dm'
+  | 'crm_consented'
+  | 'meta_lead_form'
+  | 'linked_public_channel'
+  | 'manual_public_note';
+
+export type InstagramWarmupPath =
+  | 'retargeting_ad'
+  | 'click_to_dm_ad'
+  | 'comment_keyword'
+  | 'story_reply'
+  | 'dm_keyword'
+  | 'mention_trigger'
+  | 'lead_form'
+  | 'bio_link'
+  | 'customer_list_lookalike'
+  | 'influencer_funnel'
+  | 'referral_link'
+  | 'ugc_challenge'
+  | 'crm_reactivation';
+
+export type InstagramEligibilityStatus = 'allowed' | 'blocked' | 'needs-review';
+
+export type InstagramConsentState = 'none' | 'pending' | 'granted' | 'declined' | 'opted-out';
+
+export type SellerHandoffMethod =
+  | 'seller-instagram-personal'
+  | 'seller-instagram-company'
+  | 'phone'
+  | 'whatsapp'
+  | 'email';
+
+export type SellerHandoffStatus = 'queued' | 'contacted' | 'success' | 'no-response' | 'opted-out' | 'blocked';
+
+export interface InstagramPublicContact {
+  kind: InstagramContactKind;
+  value: string;
+  source: InstagramContactSource;
+  proof: string;
+  publicBusinessContact: boolean;
+  capturedAt: number;
+}
+
+export interface InstagramPublicSignals {
+  bio?: string;
+  category?: string;
+  website?: string;
+  linkedSocials?: string[];
+  notes?: string[];
+}
+
+export interface InstagramConsentRecord {
+  state: InstagramConsentState;
+  source: 'reply' | 'form' | 'lead_ad' | 'crm' | 'opt_out' | 'manual';
+  proof: string;
+  recordedAt: number;
+}
+
+export interface InstagramEligibilityDecision {
+  status: InstagramEligibilityStatus;
+  reason: string;
+  allowedMethods: string[];
+  sourceProof?: string;
+}
+
+export interface InstagramSellerHandoff {
+  id: string;
+  accountId: string;
+  assignedSeller: string;
+  allowedMethod: SellerHandoffMethod;
+  reason: string;
+  script: string;
+  maxAttempts: number;
+  attempts: number;
+  deadlineAt: number;
+  status: SellerHandoffStatus;
+  manualOnly: boolean;
+  noAutomation: boolean;
+  sellerAccountVerified: boolean;
+  createdAt: number;
+  lastOutcome?: string;
+}
+
+export interface InstagramSellerAction {
+  handoffId: string;
+  accountId: string;
+  seller: string;
+  method: SellerHandoffMethod;
+  outcome: 'contacted' | 'success' | 'no-response' | 'opt-out';
+  note: string;
+  recordedAt: number;
+}
+
+export interface InstagramGrowthEvent {
+  stage: InstagramGrowthStage;
+  note: string;
+  actor: string;
+  timestamp: number;
+}
+
+export interface InstagramGrowthAccount {
+  id: string;
+  handle: string;
+  displayName?: string;
+  accountType: InstagramGrowthAccountType;
+  stage: InstagramGrowthStage;
+  source: string;
+  matchScore?: number;
+  signals: InstagramPublicSignals;
+  contacts: InstagramPublicContact[];
+  consent: InstagramConsentRecord[];
+  warmupPaths: InstagramWarmupPath[];
+  eligibility: InstagramEligibilityDecision;
+  sellerHandoff?: InstagramSellerHandoff;
+  archiveReason?: string;
+  createdAt: number;
+  updatedAt: number;
+  events: InstagramGrowthEvent[];
+}
+
+export interface InstagramFunnelMetrics {
+  totalFound: number;
+  classified: number;
+  publicSignalsFound: number;
+  publicContactFound: number;
+  eligible: number;
+  engaged: number;
+  permissionSent: number;
+  consented: number;
+  converted: number;
+  booked: number;
+  archived: number;
+  sellerHandoff: number;
+  optedOut: number;
+  blocked: number;
+}

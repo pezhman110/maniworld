@@ -34,6 +34,7 @@
     <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
+    <button class="tab-btn" data-tab="instagram-growth">Instagram Growth</button>
     <button class="tab-btn" data-tab="pages-websites" data-i18n="pages.nav">Pages &amp; Websites</button>
   </nav>
 
@@ -539,6 +540,146 @@
       <div id="contentFallbackQueue" class="cards"></div>
       <h3>Instagram ads manual-fallback queue</h3>
       <div id="instagramAdsFallbackQueue" class="cards"></div>
+    </section>
+
+    <section id="tab-instagram-growth" class="tab">
+      <h2>Instagram Growth — Legal Contact Funnel</h2>
+      <p class="hint">
+        Consent-first Instagram account funnel: collect only public signals and sourced contact points, warm up with
+        compliant paths, send permission-first messages only after eligibility, and hand off unresolved accounts to
+        sellers as manual, limited, logged tasks — never as a way around consent.
+      </p>
+
+      <h3>Funnel Summary</h3>
+      <div id="instagramGrowthMetrics" class="kpi-grid"></div>
+
+      <h3>Add account</h3>
+      <form id="instagramGrowthAccountForm">
+        <label>Handle <input id="igHandle" type="text" placeholder="@target" required /></label>
+        <label>Display name <input id="igDisplayName" type="text" /></label>
+        <label>Source <input id="igSource" type="text" placeholder="manual search / official API export" required /></label>
+        <label>Type
+          <select id="igAccountType">
+            <option value="unknown">unknown</option>
+            <option value="personal">personal</option>
+            <option value="business">business</option>
+            <option value="creator">creator</option>
+            <option value="influencer">influencer</option>
+            <option value="company">company</option>
+          </select>
+        </label>
+        <label>Match score <input id="igMatchScore" type="number" min="0" max="100" /></label>
+        <button type="submit">Add account</button>
+      </form>
+
+      <h3>Public signal / contact capture</h3>
+      <form id="instagramGrowthSignalForm">
+        <label>Account id <input id="igsAccountId" type="text" required /></label>
+        <label>Bio <input id="igsBio" type="text" /></label>
+        <label>Category <input id="igsCategory" type="text" /></label>
+        <label>Website <input id="igsWebsite" type="url" /></label>
+        <button type="submit">Save signals</button>
+      </form>
+      <form id="instagramGrowthContactForm">
+        <label>Account id <input id="igcAccountId" type="text" required /></label>
+        <label>Kind
+          <select id="igcKind">
+            <option value="phone">phone</option>
+            <option value="whatsapp">whatsapp</option>
+            <option value="email">email</option>
+            <option value="website">website</option>
+            <option value="form">form</option>
+            <option value="other-social">other-social</option>
+          </select>
+        </label>
+        <label>Value <input id="igcValue" type="text" required /></label>
+        <label>Source
+          <select id="igcSource">
+            <option value="instagram_bio_public_contact">instagram_bio_public_contact</option>
+            <option value="contact_button">contact_button</option>
+            <option value="website_public_contact">website_public_contact</option>
+            <option value="landing_form">landing_form</option>
+            <option value="inbound_dm">inbound_dm</option>
+            <option value="crm_consented">crm_consented</option>
+            <option value="meta_lead_form">meta_lead_form</option>
+            <option value="linked_public_channel">linked_public_channel</option>
+            <option value="manual_public_note">manual_public_note</option>
+          </select>
+        </label>
+        <label>Proof <input id="igcProof" type="text" placeholder="bio snapshot / form id / CRM consent note" required /></label>
+        <label><input id="igcPublicBusiness" type="checkbox" /> public business contact</label>
+        <button type="submit">Add contact</button>
+      </form>
+
+      <h3>Warm-up, permission, consent</h3>
+      <form id="instagramGrowthActionForm">
+        <label>Account id <input id="igaAccountId" type="text" required /></label>
+        <label>Warm-up path
+          <select id="igaWarmupPath">
+            <option value="retargeting_ad">retargeting_ad</option>
+            <option value="click_to_dm_ad">click_to_dm_ad</option>
+            <option value="comment_keyword">comment_keyword</option>
+            <option value="story_reply">story_reply</option>
+            <option value="dm_keyword">dm_keyword</option>
+            <option value="mention_trigger">mention_trigger</option>
+            <option value="lead_form">lead_form</option>
+            <option value="bio_link">bio_link</option>
+            <option value="customer_list_lookalike">customer_list_lookalike</option>
+            <option value="influencer_funnel">influencer_funnel</option>
+            <option value="referral_link">referral_link</option>
+            <option value="ugc_challenge">ugc_challenge</option>
+            <option value="crm_reactivation">crm_reactivation</option>
+          </select>
+        </label>
+        <label>Permission script <input id="igaScript" type="text" value="Hi, may we send you details and continue this conversation?" /></label>
+        <label>Proof / reason <input id="igaProof" type="text" placeholder="reply text / archive reason / opt-out proof" /></label>
+        <button type="submit" data-action="warmup">Record warm-up</button>
+        <button type="submit" data-action="prepare">Prepare permission</button>
+        <button type="submit" data-action="send">Send permission</button>
+        <button type="submit" data-action="consent">Record opt-in</button>
+        <button type="submit" data-action="convert">Convert contact</button>
+        <button type="submit" data-action="booking">Booking ready</button>
+        <button type="submit" data-action="archive">Archive</button>
+        <button type="submit" data-action="optout">Opt-out</button>
+      </form>
+
+      <h3>Human Seller Handoff Queue</h3>
+      <form id="instagramGrowthHandoffForm">
+        <label>Account id <input id="ighAccountId" type="text" required /></label>
+        <label>Seller <input id="ighSeller" type="text" placeholder="seller name" required /></label>
+        <label>Method
+          <select id="ighMethod">
+            <option value="seller-instagram-company">seller-instagram-company</option>
+            <option value="seller-instagram-personal">seller-instagram-personal</option>
+            <option value="phone">phone</option>
+            <option value="whatsapp">whatsapp</option>
+            <option value="email">email</option>
+          </select>
+        </label>
+        <label>Reason <input id="ighReason" type="text" placeholder="no automated legal path; manual review" required /></label>
+        <label>Permission-first script <input id="ighScript" type="text" required /></label>
+        <label>Max attempts <input id="ighMaxAttempts" type="number" min="1" value="1" required /></label>
+        <label>Deadline <input id="ighDeadline" type="date" required /></label>
+        <button type="submit">Queue seller handoff</button>
+      </form>
+      <form id="instagramGrowthSellerActionForm">
+        <label>Account id <input id="ighaAccountId" type="text" required /></label>
+        <label>Outcome
+          <select id="ighaOutcome">
+            <option value="contacted">contacted</option>
+            <option value="success">success</option>
+            <option value="no-response">no-response</option>
+            <option value="opt-out">opt-out</option>
+          </select>
+        </label>
+        <label>Note <input id="ighaNote" type="text" required /></label>
+        <button type="submit">Record seller action</button>
+      </form>
+      <div id="instagramGrowthHandoffs" class="cards"></div>
+
+      <h3>Accounts, Legal Gate, Archive / Stop</h3>
+      <div id="instagramGrowthAccounts" class="cards"></div>
+      <div id="instagramGrowthArchive" class="cards"></div>
     </section>
 
     <section id="tab-pages-websites" class="tab">
