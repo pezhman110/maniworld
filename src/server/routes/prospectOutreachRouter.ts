@@ -4,6 +4,7 @@ import {
   OutreachScriptRegistry,
   generateProspectContractPacket,
 } from '../../modules/prospectOutreach';
+import { AIPersonaRegistry } from '../../modules/project';
 
 /**
  * Prospect outreach pipeline API.
@@ -18,9 +19,11 @@ import {
 export function createProspectOutreachRouter(deps: {
   prospects: OutreachProspectRegistry;
   scripts: OutreachScriptRegistry;
+  /** Optional: when provided, an `aiPersonaId` on the online-session invite must reference an already manager-approved persona. */
+  personas?: AIPersonaRegistry;
 }): Router {
   const router = Router();
-  const { prospects, scripts } = deps;
+  const { prospects, scripts, personas } = deps;
 
   const handleError = (res: import('express').Response, err: unknown, status = 400) => {
     res.status(status).json({ error: err instanceof Error ? err.message : String(err) });
@@ -96,8 +99,22 @@ export function createProspectOutreachRouter(deps: {
   });
 
   router.post('/prospects/:id/online-session/invite', (req, res) => {
+    const body = req.body ?? {};
+    // Hard gate: an AI persona can never host a live session before a manager has approved it.
+    if (body.aiPersonaId) {
+      if (!personas) {
+        res.status(400).json({ error: 'AI persona approval could not be verified: no persona registry configured.' });
+        return;
+      }
+      try {
+        personas.assertApproved(body.aiPersonaId);
+      } catch (err) {
+        handleError(res, err, 400);
+        return;
+      }
+    }
     try {
-      res.json({ prospect: prospects.inviteOnlineSession(req.params.id, req.body ?? {}) });
+      res.json({ prospect: prospects.inviteOnlineSession(req.params.id, body) });
     } catch (err) {
       handleError(res, err, 404);
     }

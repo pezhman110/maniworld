@@ -756,6 +756,72 @@ export interface AudienceProfile {
 }
 
 /**
+ * Project (step 0) types.
+ *
+ * The very first step of the whole pipeline: an external person (the
+ * client/manager placing the request) enters the project's information and
+ * gives it a name (e.g. "Freelancer"). Once named, the system opens exactly
+ * three parallel acquisition routes for that project - one per
+ * `AudienceRoute` - each of which can be switched on independently:
+ *  1. 'direct-network' - search online/offline networks for matching people
+ *     and contact them directly.
+ *  2. 'job-posting' - stand up a page on the client's own site/domain and
+ *     run (free) campaigns.
+ *  3. 'resume-intake' - pull submitted resumes from job-board accounts
+ *     (LinkedIn/Indeed) the client connects, and screen them.
+ * A project also tracks who is allowed to run AI-hosted online interviews
+ * on its behalf, via `AIInterviewPersona` (see below).
+ */
+
+/** One of the project's three acquisition routes and whether it has been switched on yet. */
+export interface ProjectRouteState {
+  route: AudienceRoute;
+  active: boolean;
+  activatedAt?: number;
+}
+
+/** A project as entered by the external client/manager in step 0: a name plus its goals/standards. */
+export interface Project {
+  id: string;
+  /** The name the external client chose for this project, e.g. "Freelancer". */
+  name: string;
+  /** The must/should goals and standards this project is run against (feeds compliance & scoring). */
+  goals: string[];
+  /** Who (the external client) entered this project's information. */
+  createdBy: string;
+  /** Links this project to the matching `AudienceProfile` group once one is created for it, if any. */
+  audienceProfileId?: string;
+  /** Exactly one state per `AudienceRoute`, always created together so all three routes are always visible. */
+  routes: ProjectRouteState[];
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Whether a manager has cleared an AI persona to actually host an online
+ * interview/consultation on the project's behalf. An AI persona can never
+ * be used in a live session while still 'pending-manager-approval'.
+ */
+export type AIPersonaApprovalStatus = 'pending-manager-approval' | 'approved' | 'rejected';
+
+/** A requested AI persona/agent that would speak with prospects during an online session, tied to a project's goals. */
+export interface AIInterviewPersona {
+  id: string;
+  projectId: string;
+  /** Human label for the persona, e.g. "Banking Recruiter Bot". */
+  name: string;
+  /** What this persona is meant to accomplish in the call, aligned with the project's goals. */
+  purpose: string;
+  /** The behavior/script instructions this persona must follow. */
+  instructions: string;
+  requestedBy: string;
+  approvalStatus: AIPersonaApprovalStatus;
+  approvedBy?: string;
+  decidedAt?: number;
+  createdAt: number;
+}
+
+/**
  * Compliance/policy types.
  *
  * Each acquisition route (and, separately, how any interviewer/session
@@ -889,6 +955,8 @@ export type ProspectStatus =
 export interface OnlineSessionInvite {
   scheduledAt: number;
   script: string;
+  /** The AI persona conducting the call, if any. Must reference an `AIInterviewPersona` already `approved` by a manager. */
+  aiPersonaId?: string;
   outcome?: 'completed' | 'no-show';
 }
 

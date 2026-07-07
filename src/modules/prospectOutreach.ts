@@ -200,12 +200,23 @@ export class OutreachProspectRegistry {
     return prospect;
   }
 
-  /** Invites the prospect to an online consultation, using the combined default+custom script. */
-  inviteOnlineSession(id: string, params: { scheduledAt: number; script: string }): Prospect {
+  /**
+   * Invites the prospect to an online consultation, using the combined
+   * default+custom script. If the call is to be hosted by an AI persona,
+   * `aiPersonaId` must reference one already approved by a manager - this
+   * registry only records the id; the router layer is responsible for
+   * verifying the persona's approval status before calling this method
+   * (see `AIPersonaRegistry.assertApproved` in `project.ts`).
+   */
+  inviteOnlineSession(id: string, params: { scheduledAt: number; script: string; aiPersonaId?: string }): Prospect {
     const prospect = this.mustGet(id);
     this.assertStatus(prospect, ['direct-contacted', 'online-no-show']);
     if (!params.script.trim()) throw new Error('"script" is required.');
-    const onlineSession: OnlineSessionInvite = { scheduledAt: params.scheduledAt, script: params.script };
+    const onlineSession: OnlineSessionInvite = {
+      scheduledAt: params.scheduledAt,
+      script: params.script,
+      aiPersonaId: params.aiPersonaId,
+    };
     prospect.onlineSession = onlineSession;
     prospect.status = 'online-invited';
     return prospect;
