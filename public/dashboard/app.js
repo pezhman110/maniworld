@@ -82,6 +82,9 @@ function applyApiKey(key, status) {
   refreshPipelineOverview();
   refreshContentBriefs();
   refreshContentFallbackQueue();
+  refreshPagesWebsiteCatalog();
+  refreshPagesWebsites();
+  refreshPagesImports();
   setTimeout(() => (status.textContent = ''), 2000);
 }
 
@@ -1675,6 +1678,196 @@ async function refreshContentFallbackQueue() {
   }
 }
 
+let pagesWebsiteCatalog = null;
+
+function fillSelect(id, values, labeler = (value) => value) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  select.innerHTML = '';
+  values.forEach((value) => {
+    const opt = document.createElement('option');
+    opt.value = typeof value === 'string' ? value : value.id;
+    opt.textContent = labeler(value);
+    select.appendChild(opt);
+  });
+}
+
+async function refreshPagesWebsiteCatalog() {
+  try {
+    pagesWebsiteCatalog = await apiFetch('/pages-websites/catalog');
+    document.getElementById('pwTemplateCount').textContent = pagesWebsiteCatalog.templates.length;
+    document.getElementById('pwBlockCount').textContent = pagesWebsiteCatalog.blocks.length;
+    document.getElementById('pwBrandCount').textContent = pagesWebsiteCatalog.brandKits.length;
+    fillSelect('pwStartMode', pagesWebsiteCatalog.options.startModes);
+    fillSelect('pwTemplate', pagesWebsiteCatalog.templates, (template) => template.name);
+    fillSelect('pwGoal', pagesWebsiteCatalog.options.pageGoals);
+    fillSelect('pwAudience', pagesWebsiteCatalog.options.audienceTypes);
+    fillSelect('pwPageType', pagesWebsiteCatalog.options.pageTypes);
+    fillSelect('pwBrandKit', pagesWebsiteCatalog.brandKits, (brand) => brand.brandName);
+    fillSelect('pwLanguageMode', pagesWebsiteCatalog.options.languageModes);
+    fillSelect('pwDestination', pagesWebsiteCatalog.options.formDestinations);
+  } catch (err) {
+    const container = document.getElementById('pagesWebsiteList');
+    if (container) container.innerHTML = `<p class="hint">Failed to load catalog: ${err.message}</p>`;
+  }
+}
+
+function buildPageBriefFromForm() {
+  const connection = document.getElementById('pwConnection').value.trim();
+  return {
+    startMode: document.getElementById('pwStartMode').value,
+    goal: document.getElementById('pwGoal').value,
+    targetAudience: document.getElementById('pwAudience').value,
+    pageType: document.getElementById('pwPageType').value,
+    brandKitId: document.getElementById('pwBrandKit').value,
+    colorStyle: 'luxury-black-gold',
+    languageMode: document.getElementById('pwLanguageMode').value,
+    inspirationUrls: [],
+    requiredBlocks: [],
+    requiredFormFields: [],
+    dataDestination: document.getElementById('pwDestination').value,
+    targetId: connection || undefined,
+    requiredActions: ['show-thank-you', 'create-lead', 'score-lead', 'route-lead'],
+    requiredTools: ['smart-form-builder', 'analytics', 'routing'],
+    complianceRequirements: ['privacy', 'consent'],
+    analyticsRequirements: ['views', 'form-starts', 'submissions', 'conversion-rate'],
+    postSubmitWorkflow: [],
+  };
+}
+
+function setupPagesWebsiteForm() {
+  const form = document.getElementById('pagesWebsiteForm');
+  if (!form) return;
+  document.getElementById('pwTemplate').addEventListener('change', () => {
+    const template = pagesWebsiteCatalog?.templates.find((item) => item.id === document.getElementById('pwTemplate').value);
+    if (!template) return;
+    document.getElementById('pwGoal').value = template.goalType;
+    document.getElementById('pwAudience').value = template.audienceType;
+    document.getElementById('pwPageType').value = template.pageType;
+    document.getElementById('pwDestination').value = template.defaultRouting;
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await apiFetch('/pages-websites/pages', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: document.getElementById('pwId').value.trim(),
+          slug: document.getElementById('pwSlug').value.trim(),
+          title: document.getElementById('pwTitle').value.trim(),
+          templateId: document.getElementById('pwTemplate').value,
+          brief: buildPageBriefFromForm(),
+          seo: {
+            title: document.getElementById('pwSeoTitle').value.trim(),
+            metaDescription: document.getElementById('pwMeta').value.trim(),
+          },
+        }),
+      });
+      refreshPagesWebsites();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshPagesWebsites() {
+  const container = document.getElementById('pagesWebsiteList');
+  if (!container) return;
+  try {
+    const { pages } = await apiFetch('/pages-websites/pages');
+    document.getElementById('pwPageCount').textContent = pages.length;
+    container.innerHTML = pages.length
+      ? pages
+          .map(
+            (page) => `<div class="card">
+              <h4>${escapeHtml(page.title)} (${escapeHtml(page.id)}) <span class="status connected">${escapeHtml(page.status)}</span></h4>
+              <div>Slug: <code>/public/page/${escapeHtml(page.slug)}</code></div>
+              <div>Goal: ${escapeHtml(page.brief.goal)} · Audience: ${escapeHtml(page.brief.targetAudience)} · Destination: ${escapeHtml(page.form.destination)}</div>
+              <div>Quality: ${page.qualityScore.score}/100 — ${escapeHtml(page.qualityScore.status)}</div>
+              <div>Analytics: ${page.analytics.views} views · ${page.analytics.submissions} submissions · ${(page.analytics.conversionRate * 100).toFixed(1)}% conversion</div>
+              <div>
+                <button data-action="pw-score" data-id="${escapeHtml(page.id)}">Score</button>
+                <button data-action="pw-preview" data-id="${escapeHtml(page.id)}">Preview</button>
+                <button data-action="pw-approval" data-id="${escapeHtml(page.id)}">Request approval</button>
+                <button data-action="pw-publish" data-id="${escapeHtml(page.id)}">Publish</button>
+              </div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No Pages & Websites assets yet — create the first target-based page above.</p>';
+    container.querySelectorAll('button[data-action]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        try {
+          if (btn.dataset.action === 'pw-score') {
+            await apiFetch(`/pages-websites/pages/${btn.dataset.id}/quality-score`, { method: 'POST' });
+          } else if (btn.dataset.action === 'pw-preview') {
+            await apiFetch(`/pages-websites/pages/${btn.dataset.id}/status/preview`, { method: 'POST', body: '{}' });
+          } else if (btn.dataset.action === 'pw-approval') {
+            const { approvalRequest } = await apiFetch(`/pages-websites/pages/${btn.dataset.id}/approval-requests`, {
+              method: 'POST',
+              body: JSON.stringify({ requestedBy: 'dashboard' }),
+            });
+            await apiFetch(`/pages-websites/approval-requests/${approvalRequest.id}/decision`, {
+              method: 'POST',
+              body: JSON.stringify({ decision: 'approved', decidedBy: 'dashboard-manager' }),
+            });
+          } else if (btn.dataset.action === 'pw-publish') {
+            await apiFetch(`/pages-websites/pages/${btn.dataset.id}/publish`, { method: 'POST', body: '{}' });
+          }
+          refreshPagesWebsites();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    });
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load pages: ${err.message}</p>`;
+  }
+}
+
+function setupPagesImportForm() {
+  const form = document.getElementById('pagesImportForm');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const kind = document.getElementById('pwiKind').value;
+    try {
+      await apiFetch(`/pages-websites/imports/${kind}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          pageId: document.getElementById('pwiPageId').value.trim() || undefined,
+          fileName: document.getElementById('pwiFileName').value.trim(),
+          intent: document.getElementById('pwiIntent').value.trim() || undefined,
+        }),
+      });
+      refreshPagesImports();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshPagesImports() {
+  const container = document.getElementById('pagesImportsList');
+  if (!container) return;
+  try {
+    const { imports } = await apiFetch('/pages-websites/imports');
+    container.innerHTML = imports.length
+      ? imports
+          .map(
+            (record) => `<div class="card">
+              <h4>${escapeHtml(record.kind)} — ${escapeHtml(record.fileName)}</h4>
+              <div>Status: ${escapeHtml(record.status)} · Page: ${escapeHtml(record.pageId || '—')}</div>
+              <div>Intent: ${escapeHtml(record.intent || '—')}</div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No file or voice imports recorded yet.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load imports: ${err.message}</p>`;
+  }
+}
+
 setupTabs();
 setupApiKeyBar();
 setupLangSwitcher();
@@ -1700,6 +1893,8 @@ setupPipelineTrackForm();
 setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
+setupPagesWebsiteForm();
+setupPagesImportForm();
 refreshMissionGroups();
 refreshConnections();
 refreshMarkets();
@@ -1715,3 +1910,6 @@ refreshDutyScopes();
 refreshPipelineOverview();
 refreshContentBriefs();
 refreshContentFallbackQueue();
+refreshPagesWebsiteCatalog();
+refreshPagesWebsites();
+refreshPagesImports();

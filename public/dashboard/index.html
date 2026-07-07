@@ -34,6 +34,7 @@
     <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
+    <button class="tab-btn" data-tab="pages-websites" data-i18n="pages.nav">Pages &amp; Websites</button>
   </nav>
 
   <main>
@@ -497,6 +498,58 @@
 
       <h3>Manual-fallback queue (couldn't connect / no public API — post these by hand)</h3>
       <div id="contentFallbackQueue" class="cards"></div>
+    </section>
+
+    <section id="tab-pages-websites" class="tab">
+      <h2 data-i18n="pages.title">Pages &amp; Websites</h2>
+      <p class="hint" data-i18n="pages.subtitle">
+        Target-based website, landing page and conversion builder: every page has a goal, audience, smart form,
+        routing destination, quality score, workflow, analytics, referrals, approvals and public renderer.
+      </p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><strong id="pwTemplateCount">0</strong><span data-i18n="pages.templates">Templates</span></div>
+        <div class="kpi-card"><strong id="pwBlockCount">0</strong><span data-i18n="pages.blocks">Blocks</span></div>
+        <div class="kpi-card"><strong id="pwBrandCount">0</strong><span data-i18n="pages.brands">Brand kits</span></div>
+        <div class="kpi-card"><strong id="pwPageCount">0</strong><span data-i18n="pages.pages">Pages</span></div>
+      </div>
+
+      <h3 data-i18n="pages.newWizard">New Page Wizard</h3>
+      <form id="pagesWebsiteForm">
+        <label>Page id <input id="pwId" type="text" placeholder="e.g. salon-dubai" required /></label>
+        <label>Slug <input id="pwSlug" type="text" placeholder="salon-booking-dubai" required /></label>
+        <label>Title <input id="pwTitle" type="text" placeholder="Salon Booking Dubai" required /></label>
+        <label>Start mode <select id="pwStartMode"></select></label>
+        <label>Template <select id="pwTemplate"></select></label>
+        <label>Page goal <select id="pwGoal"></select></label>
+        <label>Audience <select id="pwAudience"></select></label>
+        <label>Page type <select id="pwPageType"></select></label>
+        <label>Brand kit <select id="pwBrandKit"></select></label>
+        <label>Language mode <select id="pwLanguageMode"></select></label>
+        <label>Data destination <select id="pwDestination"></select></label>
+        <label>Target / project / CRM connection <input id="pwConnection" type="text" placeholder="targetId or projectId" /></label>
+        <label>SEO title <input id="pwSeoTitle" type="text" placeholder="SEO title" /></label>
+        <label>Meta description <input id="pwMeta" type="text" placeholder="Meta description" /></label>
+        <button type="submit" data-i18n="pages.create">Create page</button>
+      </form>
+
+      <h3 data-i18n="pages.library">Page Library</h3>
+      <div id="pagesWebsiteList" class="cards"></div>
+
+      <h3 data-i18n="pages.imports">File &amp; Voice Import Interface</h3>
+      <form id="pagesImportForm">
+        <label>Page id <input id="pwiPageId" type="text" placeholder="optional page id" /></label>
+        <label>Import kind
+          <select id="pwiKind">
+            <option value="file">File import</option>
+            <option value="voice">Voice import</option>
+          </select>
+        </label>
+        <label>File name <input id="pwiFileName" type="text" placeholder="lead-notes.pdf or call-recording.mp3" required /></label>
+        <label>Extracted intent <input id="pwiIntent" type="text" placeholder="booking / investor / recruitment" /></label>
+        <button type="submit">Record import</button>
+      </form>
+      <div id="pagesImportsList" class="cards"></div>
     </section>
   </main>
 
