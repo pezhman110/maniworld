@@ -1,4 +1,9 @@
-import { ContentBriefRegistry, ContentPlanRegistry, TrendResearchRegistry } from '../src/modules/contentStudio';
+import {
+  ContentBriefRegistry,
+  ContentPlanRegistry,
+  InstagramCompanyAdRegistry,
+  TrendResearchRegistry,
+} from '../src/modules/contentStudio';
 
 describe('contentStudio', () => {
   it('creates a content brief with an auto-generated bio/description', async () => {
@@ -89,5 +94,61 @@ describe('contentStudio', () => {
 
     expect(await trends.listForPlatform('tiktok')).toHaveLength(1);
     expect((await trends.listForPlatform('tiktok'))[0].keyword).toBe('day in the life');
+  });
+
+  it('creates Instagram company ads with compliance notes and validates budget/currency', async () => {
+    const ads = new InstagramCompanyAdRegistry();
+    const ad = await ads.create({
+      id: 'ad-1',
+      companyName: 'Mani World',
+      objective: 'traffic',
+      caption: 'Book your consultation today',
+      mediaUrl: 'https://example.com/ad.jpg',
+      landingUrl: 'https://example.com/landing',
+      dailyBudgetMinor: 5000,
+      currency: 'aed',
+      targetLocations: ['ae', ''],
+      targetInterests: ['beauty', 'business'],
+    });
+
+    expect(ad.status).toBe('draft');
+    expect(ad.currency).toBe('AED');
+    expect(ad.targetLocations).toEqual(['ae']);
+    expect(ad.complianceNotes.join(' ')).toMatch(/official Meta Marketing API/i);
+    expect(await ads.list()).toHaveLength(1);
+    await expect(
+      ads.create({
+        id: 'ad-2',
+        companyName: 'Mani World',
+        objective: 'traffic',
+        caption: 'x',
+        mediaUrl: 'https://example.com/ad.jpg',
+        landingUrl: 'https://example.com/landing',
+        dailyBudgetMinor: 0,
+        currency: 'AED',
+      })
+    ).rejects.toThrow();
+  });
+
+  it('updates Instagram ad submission state and lists manual fallback ads', async () => {
+    const ads = new InstagramCompanyAdRegistry();
+    await ads.create({
+      id: 'ad-1',
+      companyName: 'Mani World',
+      objective: 'leads',
+      caption: 'Contact us',
+      mediaUrl: 'https://example.com/ad.jpg',
+      landingUrl: 'https://example.com/landing',
+      dailyBudgetMinor: 1000,
+      currency: 'USD',
+    });
+
+    const updated = await ads.updateSubmission('ad-1', {
+      status: 'manual-fallback',
+      failureReason: 'missing credentials',
+    });
+
+    expect(updated.status).toBe('manual-fallback');
+    expect(await ads.listFallbackQueue()).toHaveLength(1);
   });
 });

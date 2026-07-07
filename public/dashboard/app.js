@@ -8,7 +8,7 @@ const PROVIDER_FIELDS = {
   zoom: ['accountId', 'clientId', 'clientSecret'],
   'google-meet': ['joinUrl'],
   apollo: ['apiKey'],
-  instagram: ['igUserId', 'accessToken'],
+  instagram: ['igUserId', 'instagramActorId', 'pageId', 'adAccountId', 'accessToken'],
   facebook: ['pageId', 'accessToken'],
   linkedin: ['accessToken', 'authorUrn'],
   tiktok: ['accessToken'],
@@ -82,6 +82,8 @@ function applyApiKey(key, status) {
   refreshPipelineOverview();
   refreshContentBriefs();
   refreshContentFallbackQueue();
+  refreshInstagramAds();
+  refreshInstagramAdsFallbackQueue();
   refreshPagesWebsiteCatalog();
   refreshPagesWebsites();
   refreshPagesImports();
@@ -1277,6 +1279,84 @@ function setupContentPlanForm() {
     } catch (err) {
       alert(err.message);
     }
+
+    function splitCsv(value) {
+      return value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    function setupInstagramAdForm() {
+      document.getElementById('instagramAdForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+          id: document.getElementById('iaId').value || undefined,
+          companyName: document.getElementById('iaCompanyName').value,
+          instagramHandle: document.getElementById('iaHandle').value || undefined,
+          objective: document.getElementById('iaObjective').value,
+          caption: document.getElementById('iaCaption').value,
+          mediaUrl: document.getElementById('iaMediaUrl').value,
+          landingUrl: document.getElementById('iaLandingUrl').value,
+          dailyBudgetMinor: Number(document.getElementById('iaBudget').value),
+          currency: document.getElementById('iaCurrency').value,
+          targetLocations: splitCsv(document.getElementById('iaLocations').value),
+          targetInterests: splitCsv(document.getElementById('iaInterests').value),
+          callToAction: document.getElementById('iaCta').value,
+        };
+        try {
+          await apiFetch('/content-studio/instagram-ads', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+          document.getElementById('instagramAdForm').reset();
+          document.getElementById('iaBudget').value = '5000';
+          document.getElementById('iaCurrency').value = 'AED';
+          refreshInstagramAds();
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+    }
+
+    function renderInstagramAd(ad) {
+      const statusClass = ad.status === 'submitted' ? 'connected' : ad.status === 'manual-fallback' ? 'invalid' : 'unverified';
+      const metaIds = [ad.metaCampaignId, ad.metaAdSetId, ad.metaCreativeId, ad.metaAdId].filter(Boolean).join(' / ');
+      return `<div class="card"><h4>${escapeHtml(ad.companyName)} — ${escapeHtml(ad.id)}</h4>
+        <div>${escapeHtml(ad.instagramHandle || 'instagram')} / ${escapeHtml(ad.objective)} / ${escapeHtml(ad.currency)} ${escapeHtml(ad.dailyBudgetMinor)}</div>
+        <div>${escapeHtml(ad.caption)}</div>
+        <div class="hint">Media: ${escapeHtml(ad.mediaUrl)} | Landing: ${escapeHtml(ad.landingUrl)}</div>
+        <div class="hint">Target: ${escapeHtml(ad.targetLocations.join(', ') || 'default AE')} | Interests: ${escapeHtml(
+        ad.targetInterests.join(', ') || 'none'
+      )}</div>
+        <div>Status: <strong class="status ${statusClass}">${escapeHtml(ad.status)}</strong>${
+        ad.failureReason ? ` — ${escapeHtml(ad.failureReason)}` : ''
+      }</div>
+        ${metaIds ? `<div class="hint">Meta IDs: ${escapeHtml(metaIds)}</div>` : ''}
+        <div><button data-submit-instagram-ad="${escapeHtml(ad.id)}">Submit to Meta as paused ad</button></div>
+      </div>`;
+    }
+
+    async function refreshInstagramAds() {
+      const container = document.getElementById('instagramAdsList');
+      try {
+        const { ads } = await apiFetch('/content-studio/instagram-ads');
+        container.innerHTML = ads.length ? ads.map(renderInstagramAd).join('') : '<p class="hint">No Instagram ads yet.</p>';
+        container.querySelectorAll('button[data-submit-instagram-ad]').forEach((btn) =>
+          btn.addEventListener('click', async () => {
+            try {
+              await apiFetch(`/content-studio/instagram-ads/${btn.dataset.submitInstagramAd}/submit`, { method: 'POST' });
+              refreshInstagramAds();
+              refreshInstagramAdsFallbackQueue();
+            } catch (err) {
+              alert(err.message);
+            }
+          })
+        );
+      } catch (err) {
+        container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+      }
+    }
   });
 }
 
@@ -1678,6 +1758,25 @@ async function refreshContentFallbackQueue() {
   }
 }
 
+async function refreshInstagramAdsFallbackQueue() {
+  const container = document.getElementById('instagramAdsFallbackQueue');
+  try {
+    const { ads } = await apiFetch('/content-studio/instagram-ads/fallback-queue');
+    container.innerHTML = ads.length
+      ? ads
+          .map(
+            (ad) =>
+              `<div class="card"><h4>${escapeHtml(ad.companyName)} — ${escapeHtml(ad.id)}</h4><div>${escapeHtml(
+                ad.caption
+              )}</div><div>${escapeHtml(ad.failureReason || 'Launch manually in Meta Ads Manager.')}</div></div>`
+          )
+          .join('')
+      : '<p class="hint">No Instagram ads waiting for manual launch.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
 let pagesWebsiteCatalog = null;
 
 function fillSelect(id, values, labeler = (value) => value) {
@@ -1893,6 +1992,7 @@ setupPipelineTrackForm();
 setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
+setupInstagramAdForm();
 setupPagesWebsiteForm();
 setupPagesImportForm();
 refreshMissionGroups();
@@ -1910,6 +2010,8 @@ refreshDutyScopes();
 refreshPipelineOverview();
 refreshContentBriefs();
 refreshContentFallbackQueue();
+refreshInstagramAds();
+refreshInstagramAdsFallbackQueue();
 refreshPagesWebsiteCatalog();
 refreshPagesWebsites();
 refreshPagesImports();

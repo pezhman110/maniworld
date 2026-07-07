@@ -1,4 +1,4 @@
-import { createSocialPublisher, publishToWebsite } from '../src/modules/socialPublisher';
+import { createInstagramAdPublisher, createSocialPublisher, publishToWebsite } from '../src/modules/socialPublisher';
 
 function mockFetch(impl: (url: string, init?: RequestInit) => Promise<Response>): typeof fetch {
   return impl as unknown as typeof fetch;
@@ -74,5 +74,72 @@ describe('socialPublisher', () => {
   it('always publishes the website destination locally with no network call', () => {
     const result = publishToWebsite();
     expect(result.status).toBe('published');
+  });
+
+  it('creates a paused Instagram ad through Meta Marketing API credentials', async () => {
+    const calls: string[] = [];
+    const fetchImpl = mockFetch(async (url) => {
+      calls.push(url);
+      return new Response(JSON.stringify({ id: `id-${calls.length}` }), { status: 200 });
+    });
+    const publishAd = createInstagramAdPublisher(fetchImpl);
+
+    const result = await publishAd(
+      { accessToken: 'token', adAccountId: '123', pageId: 'page-1', instagramActorId: 'ig-1' },
+      {
+        id: 'ad-1',
+        companyName: 'Mani World',
+        objective: 'traffic',
+        caption: 'Book today',
+        mediaUrl: 'https://example.com/ad.jpg',
+        landingUrl: 'https://example.com',
+        dailyBudgetMinor: 5000,
+        currency: 'AED',
+        targetLocations: ['AE'],
+        targetInterests: ['beauty'],
+        callToAction: 'LEARN_MORE',
+        status: 'draft',
+        complianceNotes: [],
+        createdAt: 1,
+      }
+    );
+
+    expect(result.status).toBe('submitted');
+    expect(result.metaCampaignId).toBe('id-1');
+    expect(result.metaAdId).toBe('id-4');
+    expect(calls).toEqual([
+      'https://graph.facebook.com/v19.0/act_123/campaigns',
+      'https://graph.facebook.com/v19.0/act_123/adsets',
+      'https://graph.facebook.com/v19.0/act_123/adcreatives',
+      'https://graph.facebook.com/v19.0/act_123/ads',
+    ]);
+  });
+
+  it('routes Instagram ads to manual fallback when credentials or Meta calls fail', async () => {
+    const publishAd = createInstagramAdPublisher(mockFetch(async () => new Response('error', { status: 400 })));
+    const ad = {
+      id: 'ad-1',
+      companyName: 'Mani World',
+      objective: 'traffic' as const,
+      caption: 'Book today',
+      mediaUrl: 'https://example.com/ad.jpg',
+      landingUrl: 'https://example.com',
+      dailyBudgetMinor: 5000,
+      currency: 'AED',
+      targetLocations: [],
+      targetInterests: [],
+      callToAction: 'LEARN_MORE' as const,
+      status: 'draft' as const,
+      complianceNotes: [],
+      createdAt: 1,
+    };
+
+    expect((await publishAd(undefined, ad)).status).toBe('manual-fallback');
+    const failed = await publishAd(
+      { accessToken: 'token', adAccountId: '123', pageId: 'page-1', instagramActorId: 'ig-1' },
+      ad
+    );
+    expect(failed.status).toBe('manual-fallback');
+    expect(failed.message).toMatch(/campaign creation failed/i);
   });
 });

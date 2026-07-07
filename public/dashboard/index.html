@@ -496,8 +496,49 @@
       </form>
       <div id="contentItemsList" class="cards"></div>
 
+      <h3>Instagram company ads</h3>
+      <p class="hint">
+        Create a compliant ad request for an Instagram account your company owns. If Instagram credentials include
+        accessToken, adAccountId, pageId and instagramActorId, the app creates the ad in Meta Ads Manager as
+        <strong>PAUSED</strong> for final human review; otherwise it goes to manual fallback.
+      </p>
+      <form id="instagramAdForm">
+        <label>Id (optional) <input id="iaId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Company name <input id="iaCompanyName" type="text" placeholder="Mani World" required /></label>
+        <label>Instagram handle <input id="iaHandle" type="text" placeholder="@yourcompany" /></label>
+        <label>Objective
+          <select id="iaObjective">
+            <option value="traffic">traffic</option>
+            <option value="leads">leads</option>
+            <option value="messages">messages</option>
+            <option value="awareness">awareness</option>
+          </select>
+        </label>
+        <label>Caption <input id="iaCaption" type="text" placeholder="Company offer / promotion text" required /></label>
+        <label>Public media URL <input id="iaMediaUrl" type="url" placeholder="https://example.com/ad-image.jpg" required /></label>
+        <label>Landing URL <input id="iaLandingUrl" type="url" placeholder="https://example.com/landing" required /></label>
+        <label>Daily budget (minor units) <input id="iaBudget" type="number" min="1" value="5000" required /></label>
+        <label>Currency <input id="iaCurrency" type="text" maxlength="3" value="AED" required /></label>
+        <label>Target country codes <input id="iaLocations" type="text" placeholder="AE, IR" /></label>
+        <label>Target interests <input id="iaInterests" type="text" placeholder="beauty, business, investment" /></label>
+        <label>Call to action
+          <select id="iaCta">
+            <option value="LEARN_MORE">LEARN_MORE</option>
+            <option value="SIGN_UP">SIGN_UP</option>
+            <option value="CONTACT_US">CONTACT_US</option>
+            <option value="BOOK_TRAVEL">BOOK_TRAVEL</option>
+            <option value="GET_OFFER">GET_OFFER</option>
+            <option value="SEND_MESSAGE">SEND_MESSAGE</option>
+          </select>
+        </label>
+        <button type="submit">Create Instagram ad</button>
+      </form>
+      <div id="instagramAdsList" class="cards"></div>
+
       <h3>Manual-fallback queue (couldn't connect / no public API — post these by hand)</h3>
       <div id="contentFallbackQueue" class="cards"></div>
+      <h3>Instagram ads manual-fallback queue</h3>
+      <div id="instagramAdsFallbackQueue" class="cards"></div>
     </section>
 
     <section id="tab-pages-websites" class="tab">
