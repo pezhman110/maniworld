@@ -72,8 +72,11 @@ Each market (`salon-women`, `home-service`, `business-buying`, `business-selling
   roles — the code enforces that someone must be assigned, but the specific
   person(s) must be decided by the team.
 - **Production-grade auth** for the admin API is a single shared API key
-  (`MW_ADMIN_API_KEY`); per-user accounts/RBAC for the dashboard is a
-  follow-up.
+  (`MW_ADMIN_API_KEY`); per-user accounts/RBAC (e.g. username+password or SSO
+  with session/JWT tokens) for the dashboard is a follow-up — the entrance
+  page (below) is intentionally built as a thin, swappable layer so this key
+  check can later be replaced with real per-user login without touching the
+  rest of the API/dashboard.
 
 ### Persistence, real integrations, and the admin dashboard
 
@@ -89,8 +92,9 @@ Beyond the pure pipeline modules above, the repository now also includes:
 | Lead enrichment | `src/modules/integrationClients/apolloClient.ts` | `ApolloClient` enriches a lead's contact profile via Apollo.io. |
 | Market registry | `src/modules/marketRegistry.ts` | Lets a manager add a brand-new market (with its own working hours and daily target rules) from the dashboard, without a code deploy; merges with the 5 built-in markets for pacing/reporting. |
 | Presentation & online-consultation campaigns | `src/modules/presentationCampaigns.ts` | A fully independent module for the "presentation session with online consultation" requirement: `AudienceProfileRegistry` lets a manager change the target-audience text and its goals together (e.g. switch from influencer → company → group → banking sector, with the goals changing accordingly); `CommissionModelRegistry` defines a percentage/flat/tiered commission & collaboration model, optionally scoped to one audience profile/vertical (so picking "banking" people changes the whole commission plan); `ResumeIntakeRegistry` records where a collaborator/candidate's resume came from (Indeed, LinkedIn, a manual link, or an upload); `LandingPageRegistry` defines a single-page site (slug, optional custom domain to point at once hosted, hero text, and any number of manually-added content blocks — words/sentences/addresses — plus the lead-capture fields it should collect), exactly like the manual word/sentence/address editing in the prior project. |
-| Admin API | `src/server/` | Express app (`createApp()`) exposing `/api/credentials`, `/api/markets`, and `/api/presentation` (audience profiles, commission models, resumes, landing pages) CRUD + connection-test + pacing endpoints, protected by an `x-api-key` header (`MW_ADMIN_API_KEY`). |
-| Admin dashboard | `public/dashboard/` | Static, dependency-free HTML/JS admin UI (served at `/dashboard`) to add/test/remove every integration connection, manage markets, and — on one "Presentation Campaigns" page — configure audience profiles, commission models, resume intake, and landing pages end-to-end. |
+| Admin API | `src/server/` | Express app (`createApp()`) exposing `/api/credentials`, `/api/markets`, and `/api/presentation` (audience profiles, commission models, resumes, landing pages) CRUD + connection-test + pacing endpoints, protected by an `x-api-key` header (`MW_ADMIN_API_KEY`). `GET /api/i18n` is public and returns the EN/FA/AR translation dictionary. |
+| Admin dashboard | `public/dashboard/` | Static, dependency-free HTML/JS admin UI (served at `/dashboard`) to add/test/remove every integration connection, manage markets, and — on one "Presentation Campaigns" page — configure audience profiles, commission models, resume intake, and landing pages end-to-end. Includes an EN/FA/AR language switcher that sets text direction (`dir="rtl"` for fa/ar). |
+| Entrance / sign-in page | `public/entrance/` | Branded landing page (served at `/entrance`, and `/` redirects here) where an admin enters the `x-api-key` and picks a language (EN/FA/AR) before being sent to `/dashboard`. |
 
 #### Running the admin API + dashboard
 
@@ -98,7 +102,7 @@ Beyond the pure pipeline modules above, the repository now also includes:
 npm install
 npm run build
 MW_ADMIN_API_KEY=change-me MW_CREDENTIALS_KEY=$(openssl rand -hex 32) npm run start:server
-# open http://localhost:3000/dashboard
+# open http://localhost:3000/  (redirects to the entrance/sign-in page, then /dashboard)
 ```
 
 Environment variables (see `.env.example`):
@@ -107,6 +111,32 @@ Environment variables (see `.env.example`):
 - `MW_ADMIN_API_KEY` — required in production; requests to `/api/*` must send it as the `x-api-key` header. If unset, the API is open (development only).
 - `MW_CREDENTIALS_KEY` — required in production; used to derive the AES-256 key that encrypts stored integration credentials. If unset, a random per-process key is used and all stored secrets are lost on restart.
 - `DATABASE_URL` — optional Postgres/Supabase connection string. When set, credentials and custom markets are persisted via `PostgresRepository` using the schema in `migrations/001_init.sql`; when unset, they're kept in memory.
+
+### Deploy (point a domain/host at this app)
+
+The server is a single Express app (`src/server/index.ts`) that serves both
+the API and the static entrance/dashboard pages, so putting it live behind a
+domain only requires:
+
+1. Build once: `npm install && npm run build`.
+2. Set the required environment variables on the host (see table below) —
+   nothing else needs manual configuration.
+3. Start the process: `npm run start:server` (listens on `PORT`, default
+   `3000`).
+4. Point your domain/reverse proxy (Nginx, a PaaS load balancer, etc.) at
+   that port. `GET /` redirects to `/entrance/` (sign-in), which then sends
+   the admin to `/dashboard/`.
+
+| Variable | Required? | Purpose |
+|----------|-----------|---------|
+| `PORT` | optional (default `3000`) | Port the Express server listens on. |
+| `MW_ADMIN_API_KEY` | **required in production** | Shared admin key checked against the `x-api-key` header for every `/api/*` route (except the public `/health` and `/api/i18n`). Without it the API is unauthenticated. |
+| `MW_CREDENTIALS_KEY` | **required in production** | AES-256 master key used to encrypt stored third-party credentials (Twilio, WhatsApp, Telegram, Vapi, Zoom, Apollo, social platforms). Without it, a random per-process key is used and all stored secrets are lost on restart. |
+| `DATABASE_URL` | optional | Postgres/Supabase connection string. When set, data is persisted via `PostgresRepository` (schema in `migrations/001_init.sql`); when unset, everything is kept in memory and lost on restart. |
+
+No other manual setup is needed — once these environment variables are set
+on the host and the domain is pointed at the running process, the entrance
+page, dashboard, and API are already connected and ready to use.
 
 ### Running
 
