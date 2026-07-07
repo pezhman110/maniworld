@@ -52,6 +52,68 @@ describe('AudienceProfileRegistry', () => {
       registry.create({ id: 'group', label: 'Group', targetText: 'x', goals: [] })
     ).rejects.toThrow();
   });
+
+  it('supports assigning a route, regions, daily cap and working hours to a group', async () => {
+    const registry = new AudienceProfileRegistry();
+    const profile = await registry.create({
+      id: 'freelancers-beauty',
+      label: 'Freelance beauty service providers',
+      targetText: 'Partner with our salon network.',
+      goals: ['sign-collab-agreement'],
+      route: 'direct-network',
+      regions: ['Iran-Tehran', 'UAE-Dubai'],
+      dailyCap: 50,
+      workingHours: { startHour: 9, endHour: 18 },
+    });
+    expect(profile.route).toBe('direct-network');
+    expect(profile.regions).toEqual(['Iran-Tehran', 'UAE-Dubai']);
+    expect(profile.dailyCap).toBe(50);
+    expect(profile.workingHours).toEqual({ startHour: 9, endHour: 18 });
+  });
+
+  it('rejects an invalid route', async () => {
+    const registry = new AudienceProfileRegistry();
+    await expect(
+      registry.create({
+        id: 'bad-route',
+        label: 'Bad',
+        targetText: 'x',
+        goals: ['g1'],
+        route: 'invalid-route' as never,
+      })
+    ).rejects.toThrow();
+  });
+
+  it('rejects an invalid working-hours window', async () => {
+    const registry = new AudienceProfileRegistry();
+    await expect(
+      registry.create({
+        id: 'bad-hours',
+        label: 'Bad',
+        targetText: 'x',
+        goals: ['g1'],
+        workingHours: { startHour: 18, endHour: 9 },
+      })
+    ).rejects.toThrow();
+  });
+
+  it('lets a manager change the route/regions/policy of an existing group', async () => {
+    const registry = new AudienceProfileRegistry();
+    await registry.create({
+      id: 'group-x',
+      label: 'Group X',
+      targetText: 'x',
+      goals: ['g1'],
+    });
+    const updated = await registry.update('group-x', {
+      route: 'job-posting',
+      regions: ['Iran-Isfahan'],
+      dailyCap: 20,
+    });
+    expect(updated.route).toBe('job-posting');
+    expect(updated.regions).toEqual(['Iran-Isfahan']);
+    expect(updated.dailyCap).toBe(20);
+  });
 });
 
 describe('CommissionModelRegistry', () => {

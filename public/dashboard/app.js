@@ -51,6 +51,7 @@ function setupApiKeyBar() {
   document.getElementById('saveApiKey').addEventListener('click', () => {
     adminApiKey = input.value;
     status.textContent = 'Saved for this session.';
+    refreshMissionGroups();
     refreshConnections();
     refreshMarkets();
     refreshAudienceProfiles();
@@ -1159,6 +1160,174 @@ async function refreshContentItems(briefId) {
   }
 }
 
+const ROUTE_LABELS = {
+  'direct-network': '1. Direct network search & outreach',
+  'job-posting': '2. Job posting + landing page',
+  'resume-intake': '3. Resume intake (LinkedIn/Indeed)',
+};
+
+function switchToTab(tabName) {
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  if (btn) btn.click();
+}
+
+async function refreshMissionGroups() {
+  const container = document.getElementById('missionGroupsList');
+  try {
+    const { audienceProfiles } = await apiFetch('/presentation/audience-profiles?onlyActive=false');
+    container.innerHTML = audienceProfiles.length
+      ? audienceProfiles
+          .map((p) => {
+            const routeLabel = p.route ? ROUTE_LABELS[p.route] || p.route : 'no route chosen yet';
+            const regions = p.regions && p.regions.length ? p.regions.join(', ') : '—';
+            const cap = p.dailyCap !== undefined && p.dailyCap !== null ? p.dailyCap : 'no cap';
+            const hours = p.workingHours ? `${p.workingHours.startHour}:00-${p.workingHours.endHour}:00` : '—';
+            return `<div class="card">
+              <h4>${escapeHtml(p.label)} (${escapeHtml(p.id)}) ${p.active ? '<span class="status connected">active</span>' : '<span class="status unverified">inactive</span>'}</h4>
+              <div>Route: ${escapeHtml(routeLabel)}</div>
+              <div>Goals: ${escapeHtml(p.goals.join(', '))}</div>
+              <div>Regions: ${escapeHtml(regions)}</div>
+              <div>Daily cap: ${escapeHtml(String(cap))} · Hours: ${escapeHtml(hours)}</div>
+              <div>
+                <button data-action="mission-steps" data-id="${escapeHtml(p.id)}">Manage steps</button>
+                <button data-action="mission-landing" data-id="${escapeHtml(p.id)}">Build landing page</button>
+                <button data-action="mission-run" data-id="${escapeHtml(p.id)}">${p.active ? 'Open in Pipeline' : 'Start'}</button>
+              </div>
+            </div>`;
+          })
+          .join('')
+      : '<p class="hint">No groups yet — add one below (e.g. freelancers-beauty, influencers, banking-network, plan-adjacent).</p>';
+
+    container.querySelectorAll('button[data-action="mission-steps"]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        document.getElementById('msGroupId').value = btn.dataset.id;
+        refreshMissionStepPreview();
+      })
+    );
+    container.querySelectorAll('button[data-action="mission-landing"]').forEach((btn) =>
+      btn.addEventListener('click', () => {
+        document.getElementById('lpAudienceProfileId').value = btn.dataset.id;
+        switchToTab('presentation');
+      })
+    );
+    container.querySelectorAll('button[data-action="mission-run"]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/presentation/audience-profiles/${btn.dataset.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ active: true }),
+          });
+          await refreshMissionGroups();
+          switchToTab('pipeline');
+        } catch (err) {
+          alert(err.message);
+        }
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupMissionGroupForm() {
+  document.getElementById('missionGroupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('mgId').value;
+    const label = document.getElementById('mgLabel').value;
+    const targetText = document.getElementById('mgTargetText').value;
+    const goals = document
+      .getElementById('mgGoals')
+      .value.split(',')
+      .map((g) => g.trim())
+      .filter(Boolean);
+    const route = document.getElementById('mgRoute').value || undefined;
+    const regions = document
+      .getElementById('mgRegions')
+      .value.split(',')
+      .map((r) => r.trim())
+      .filter(Boolean);
+    const dailyCapRaw = document.getElementById('mgDailyCap').value;
+    const dailyCap = dailyCapRaw ? Number(dailyCapRaw) : undefined;
+    const startRaw = document.getElementById('mgHoursStart').value;
+    const endRaw = document.getElementById('mgHoursEnd').value;
+    const workingHours =
+      startRaw && endRaw ? { startHour: Number(startRaw), endHour: Number(endRaw) } : undefined;
+    try {
+      const existing = await apiFetch('/presentation/audience-profiles?onlyActive=false');
+      const already = existing.audienceProfiles.some((p) => p.id === id);
+      const payload = {
+        id,
+        label,
+        targetText,
+        goals,
+        route,
+        regions: regions.length ? regions : undefined,
+        dailyCap,
+        workingHours,
+      };
+      if (already) {
+        await apiFetch(`/presentation/audience-profiles/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch('/presentation/audience-profiles', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+      }
+      refreshMissionGroups();
+      refreshAudienceProfiles();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function refreshMissionStepPreview() {
+  const key = document.getElementById('msGroupId').value.trim();
+  const preview = document.getElementById('missionStepPreview');
+  if (!key) {
+    preview.textContent = '';
+    return;
+  }
+  apiFetch(`/outreach/scripts/${encodeURIComponent(key)}`)
+    .then(({ script }) => {
+      preview.textContent = `Steps/script for "${key}": ${script}`;
+    })
+    .catch((err) => {
+      preview.textContent = `Failed to load: ${err.message}`;
+    });
+}
+
+function setupMissionStepForm() {
+  document.getElementById('msGroupId').addEventListener('change', refreshMissionStepPreview);
+  document.getElementById('missionStepForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const key = document.getElementById('msGroupId').value.trim();
+    const base = document.getElementById('msBase').value;
+    const custom = document.getElementById('msCustom').value;
+    try {
+      if (base) {
+        await apiFetch(`/outreach/scripts/${encodeURIComponent(key)}/base`, {
+          method: 'PUT',
+          body: JSON.stringify({ text: base }),
+        });
+      }
+      if (custom) {
+        await apiFetch(`/outreach/scripts/${encodeURIComponent(key)}/custom-segments`, {
+          method: 'POST',
+          body: JSON.stringify({ text: custom }),
+        });
+      }
+      document.getElementById('msCustom').value = '';
+      refreshMissionStepPreview();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 async function refreshContentFallbackQueue() {
   const container = document.getElementById('contentFallbackQueue');
   try {
@@ -1184,6 +1353,8 @@ async function refreshContentFallbackQueue() {
 setupTabs();
 setupApiKeyBar();
 populateProviderSelect();
+setupMissionGroupForm();
+setupMissionStepForm();
 setupConnectionForm();
 setupMarketForm();
 setupAudienceProfileForm();
@@ -1199,6 +1370,7 @@ setupPipelineTrackForm();
 setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
+refreshMissionGroups();
 refreshConnections();
 refreshMarkets();
 refreshAudienceProfiles();

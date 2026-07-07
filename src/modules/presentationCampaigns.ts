@@ -1,10 +1,12 @@
 import {
   AudienceProfile,
+  AudienceRoute,
   CommissionModel,
   LandingPageContentBlock,
   LandingPageSite,
   ResumeIntake,
   ResumeSource,
+  WorkingHoursWindow,
 } from '../types/domain';
 import { InMemoryRepository, Repository } from './persistence';
 
@@ -35,6 +37,27 @@ function requireNonEmpty(value: string | undefined, field: string): string {
   return value;
 }
 
+const VALID_AUDIENCE_ROUTES: AudienceRoute[] = ['direct-network', 'job-posting', 'resume-intake'];
+
+function requireValidRoute(route: AudienceRoute): void {
+  if (!VALID_AUDIENCE_ROUTES.includes(route)) {
+    throw new Error(`Invalid audience route "${route}".`);
+  }
+}
+
+function requireValidWorkingHours(window: WorkingHoursWindow): void {
+  const { startHour, endHour } = window;
+  if (
+    !Number.isInteger(startHour) ||
+    !Number.isInteger(endHour) ||
+    startHour < 0 ||
+    endHour > 24 ||
+    startHour >= endHour
+  ) {
+    throw new Error('Working hours must be an integer 0-24 range with startHour < endHour.');
+  }
+}
+
 export class AudienceProfileRegistry {
   constructor(private repo: Repository<AudienceProfile> = new InMemoryRepository()) {}
 
@@ -44,6 +67,10 @@ export class AudienceProfileRegistry {
     targetText: string;
     goals: string[];
     vertical?: string;
+    route?: AudienceRoute;
+    regions?: string[];
+    dailyCap?: number;
+    workingHours?: WorkingHoursWindow;
     now?: number;
   }): Promise<AudienceProfile> {
     requireNonEmpty(params.id, 'id');
@@ -52,6 +79,8 @@ export class AudienceProfileRegistry {
     if (!params.goals || params.goals.length === 0) {
       throw new Error('At least one goal is required.');
     }
+    if (params.route) requireValidRoute(params.route);
+    if (params.workingHours) requireValidWorkingHours(params.workingHours);
     if (await this.repo.getById(params.id)) {
       throw new Error(`An audience profile with id "${params.id}" already exists.`);
     }
@@ -61,6 +90,10 @@ export class AudienceProfileRegistry {
       targetText: params.targetText,
       goals: params.goals,
       vertical: params.vertical,
+      route: params.route,
+      regions: params.regions,
+      dailyCap: params.dailyCap,
+      workingHours: params.workingHours,
       createdAt: params.now ?? Date.now(),
       active: true,
     };
@@ -71,10 +104,17 @@ export class AudienceProfileRegistry {
   /** Lets a manager change the audience (e.g. influencer → banking) and, with it, the target text and goals. */
   async update(
     id: string,
-    patch: Partial<Pick<AudienceProfile, 'label' | 'targetText' | 'goals' | 'vertical' | 'active'>>
+    patch: Partial<
+      Pick<
+        AudienceProfile,
+        'label' | 'targetText' | 'goals' | 'vertical' | 'active' | 'route' | 'regions' | 'dailyCap' | 'workingHours'
+      >
+    >
   ): Promise<AudienceProfile> {
     const existing = await this.repo.getById(id);
     if (!existing) throw new Error(`Audience profile "${id}" not found.`);
+    if (patch.route) requireValidRoute(patch.route);
+    if (patch.workingHours) requireValidWorkingHours(patch.workingHours);
     const updated: AudienceProfile = { ...existing, ...patch };
     await this.repo.save(id, updated);
     return updated;

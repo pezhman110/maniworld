@@ -18,7 +18,8 @@
   </header>
 
   <nav>
-    <button class="tab-btn active" data-tab="pipeline">Pipeline Overview</button>
+    <button class="tab-btn active" data-tab="mission-control">Mission Control</button>
+    <button class="tab-btn" data-tab="pipeline">Pipeline Overview</button>
     <button class="tab-btn" data-tab="connections">Connections</button>
     <button class="tab-btn" data-tab="markets">Markets</button>
     <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
@@ -28,7 +29,78 @@
   </nav>
 
   <main>
-    <section id="tab-pipeline" class="tab active">
+    <section id="tab-mission-control" class="tab active">
+      <h2>Mission Control — Growth Command Center</h2>
+      <p class="hint">
+        هدف این ماژول: پیدا کردن اکانت‌های هدف در موضوع/کشور/منطقه‌ی مشخص، غربالگری، ارتباط در همان
+        بستر، تبدیل به تلفن/ایمیل، ارتباط مستقیم، دعوت به قرار ملاقات آنلاین و در صورت تایید ادامه‌ی
+        مسیر — یا در مسیرهای موازی: ساخت آگهی استخدام + تک‌صفحه، یا دریافت و غربال رزومه از
+        لینکدین/ایندید. هر گروه هدف (فریلنسر خدمات آرایشی، اینفلوئنسر زیبایی/سرمایه‌گذاری/خرید و فروش
+        کسب‌وکار، شبکه بانکی، مخاطبین نزدیک به طرح) سیاست و مسیر خودش را دارد. پنج قدم زیر را به ترتیب
+        طی کنید؛ هر قدم مستقیماً روی داده‌های واقعی سیستم (Presentation Campaigns / Prospect Outreach)
+        کار می‌کند.
+      </p>
+
+      <h3>Step 1 — Define target audience groups (goal, commission, route, regions, policy)</h3>
+      <div id="missionGroupsList" class="cards"></div>
+      <form id="missionGroupForm">
+        <label>Group id <input id="mgId" type="text" placeholder="e.g. freelancers-beauty" required /></label>
+        <label>Label <input id="mgLabel" type="text" placeholder="e.g. Freelance beauty service providers" required /></label>
+        <label>Target text <textarea id="mgTargetText" placeholder="Message/pitch shown to this group" required></textarea></label>
+        <label>Goals (comma separated) <input id="mgGoals" type="text" placeholder="sign-collab-agreement, book-call" required /></label>
+        <label>Route (Step 2)
+          <select id="mgRoute">
+            <option value="">— choose —</option>
+            <option value="direct-network">1. Direct network search &amp; outreach</option>
+            <option value="job-posting">2. Job posting + landing page</option>
+            <option value="resume-intake">3. Resume intake (LinkedIn/Indeed)</option>
+          </select>
+        </label>
+        <label>Regions (Step 4, comma separated) <input id="mgRegions" type="text" placeholder="e.g. Iran-Tehran, UAE-Dubai" /></label>
+        <label>Daily cap (Step 4, optional) <input id="mgDailyCap" type="number" min="0" placeholder="e.g. 50" /></label>
+        <label>Working hours start (Step 4) <input id="mgHoursStart" type="number" min="0" max="24" placeholder="9" /></label>
+        <label>Working hours end (Step 4) <input id="mgHoursEnd" type="number" min="0" max="24" placeholder="18" /></label>
+        <button type="submit">Save group</button>
+      </form>
+
+      <h3>Step 2 — What each route does</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>1. Direct network search &amp; outreach</h4>
+          <div>Search a platform by topic/country/region → screen matches (score ≥80%) → contact inside the
+            platform → convert to email/phone → contact directly → invite to an online meeting → if approved,
+            move forward to contract.</div>
+        </div>
+        <div class="card">
+          <h4>2. Job posting + landing page</h4>
+          <div>Publish a job ad + a single-page site (your text or ours, hosted wherever you choose) → screen
+            applicants → contact → invite (address/name shown on the page) → same approval flow as above.</div>
+        </div>
+        <div class="card">
+          <h4>3. Resume intake (LinkedIn/Indeed)</h4>
+          <div>Pull submitted resumes from LinkedIn/Indeed/manual links → download &amp; read → screen → continue
+            exactly like route 2 from there.</div>
+        </div>
+      </div>
+
+      <h3>Step 3 — Steps for this group's route (add/remove message-script segments)</h3>
+      <form id="missionStepForm">
+        <label>Group id <input id="msGroupId" type="text" placeholder="same id as Step 1" required /></label>
+        <label>Base script (overwrite) <textarea id="msBase" placeholder="Base outreach script for this group"></textarea></label>
+        <label>Add a step / custom segment <textarea id="msCustom" placeholder="e.g. Step 3: send phone verification link"></textarea></label>
+        <button type="submit">Add step</button>
+      </form>
+      <div id="missionStepPreview" class="hint"></div>
+
+      <h3>Step 4 — Regions &amp; policy</h3>
+      <p class="hint">Set per-group in Step 1's form above: target regions, daily contact cap, and allowed working hours.</p>
+
+      <h3>Step 5 — Run &amp; see results</h3>
+      <p class="hint">Activating a group marks it live; open Pipeline Overview to watch prospects move through every step in real time.</p>
+      <div id="missionRunPanel" class="cards"></div>
+    </section>
+
+    <section id="tab-pipeline" class="tab">
       <h2>Pipeline Overview — Step by Step</h2>
       <p class="hint">
         The full journey in one place: advertisement/landing page → resume intake (Indeed / LinkedIn /

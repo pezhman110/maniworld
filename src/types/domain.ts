@@ -705,6 +705,22 @@ export interface StaffAccount {
  * editable content blocks (words/sentences/addresses).
  */
 
+/**
+ * Which acquisition route a given audience group runs on:
+ *  - 'direct-network': search a social/professional network for matching accounts, qualify,
+ *    contact in-platform, convert to email/phone, contact directly, invite online, then decide.
+ *  - 'job-posting': publish a job ad + single-page landing site, screen applicants, invite them.
+ *  - 'resume-intake': pull resumes from external sources (LinkedIn/Indeed/manual), screen, then
+ *    continue the same as 'job-posting'.
+ */
+export type AudienceRoute = 'direct-network' | 'job-posting' | 'resume-intake';
+
+/** The working-hours window (24h, local) allowed for outreach/visits for a given group. */
+export interface WorkingHoursWindow {
+  startHour: number;
+  endHour: number;
+}
+
 /** A manager-editable audience/target segment: who the presentation is aimed at and why. */
 export interface AudienceProfile {
   id: string;
@@ -715,6 +731,14 @@ export interface AudienceProfile {
   /** Goals for this audience; changes together with the audience (e.g. banking → compliance-first goals). */
   goals: string[];
   vertical?: string;
+  /** Which acquisition route this group is worked through; optional so existing profiles are unaffected. */
+  route?: AudienceRoute;
+  /** Countries/regions this group should be sourced from/targeted in, e.g. ["Iran-Tehran", "UAE-Dubai"]. */
+  regions?: string[];
+  /** Optional daily outreach/contact ceiling for this group; undefined means no cap. */
+  dailyCap?: number;
+  /** Optional allowed working-hours window for outreach/visits for this group. */
+  workingHours?: WorkingHoursWindow;
   createdAt: number;
   active: boolean;
 }
