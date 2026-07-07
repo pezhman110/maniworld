@@ -1329,6 +1329,168 @@ const ROUTE_LABELS = {
   'resume-intake': '3. Resume intake (LinkedIn/Indeed)',
 };
 
+async function refreshProjects() {
+  const container = document.getElementById('projectsList');
+  try {
+    const { projects } = await apiFetch('/projects');
+    container.innerHTML = projects.length
+      ? projects
+          .map((p) => {
+            const routesHtml = p.routes
+              .map(
+                (r) =>
+                  `<span class="status ${r.active ? 'connected' : 'unverified'}">${escapeHtml(
+                    ROUTE_LABELS[r.route] || r.route
+                  )}: ${r.active ? 'active' : 'inactive'}</span>`
+              )
+              .join(' ');
+            return `<div class="card">
+              <h4>${escapeHtml(p.name)} (${escapeHtml(p.id)})</h4>
+              <div>Entered by: ${escapeHtml(p.createdBy)}</div>
+              <div>Goals: ${escapeHtml((p.goals || []).join(', ') || '—')}</div>
+              <div>Routes: ${routesHtml}</div>
+              <div>Linked audience group: ${escapeHtml(p.audienceProfileId || '—')}</div>
+            </div>`;
+          })
+          .join('')
+      : '<p class="hint">No projects yet — create one below (step 0).</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupProjectForm() {
+  document.getElementById('projectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('pjId').value;
+    const name = document.getElementById('pjName').value;
+    const createdBy = document.getElementById('pjCreatedBy').value;
+    const goals = document
+      .getElementById('pjGoals')
+      .value.split(',')
+      .map((g) => g.trim())
+      .filter(Boolean);
+    try {
+      await apiFetch('/projects', {
+        method: 'POST',
+        body: JSON.stringify({ id, name, createdBy, goals }),
+      });
+      document.getElementById('prProjectId').value = id;
+      document.getElementById('apProjectId').value = id;
+      refreshProjects();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function setupProjectRouteForm() {
+  const form = document.getElementById('projectRouteForm');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const submitter = e.submitter;
+    const mode = submitter && submitter.dataset.mode === 'deactivate' ? 'deactivate' : 'activate';
+    const projectId = document.getElementById('prProjectId').value.trim();
+    const route = document.getElementById('prRoute').value;
+    try {
+      await apiFetch(`/projects/${encodeURIComponent(projectId)}/routes/${route}/${mode}`, { method: 'POST' });
+      refreshProjects();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+async function refreshAiPersonas() {
+  const listContainer = document.getElementById('aiPersonasList');
+  const pendingContainer = document.getElementById('aiPersonaPendingList');
+  try {
+    const { personas } = await apiFetch('/projects/ai-personas/pending-approval');
+    pendingContainer.innerHTML = personas.length
+      ? personas
+          .map(
+            (p) => `<div class="card">
+              <h4>${escapeHtml(p.name)} (${escapeHtml(p.id)}) — project ${escapeHtml(p.projectId)}</h4>
+              <div>Purpose: ${escapeHtml(p.purpose)}</div>
+              <div>Requested by: ${escapeHtml(p.requestedBy)}</div>
+              <div>
+                <input type="text" placeholder="Manager name" data-decided-by="${escapeHtml(p.id)}" />
+                <button data-action="approve-persona" data-id="${escapeHtml(p.id)}">Approve</button>
+                <button data-action="reject-persona" data-id="${escapeHtml(p.id)}">Reject</button>
+              </div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">Nothing waiting for manager approval.</p>';
+
+    pendingContainer.querySelectorAll('button[data-action="approve-persona"], button[data-action="reject-persona"]').forEach(
+      (btn) => {
+        btn.addEventListener('click', async () => {
+          const decision = btn.dataset.action === 'approve-persona' ? 'approved' : 'rejected';
+          const decidedByInput = pendingContainer.querySelector(`input[data-decided-by="${btn.dataset.id}"]`);
+          const decidedBy = decidedByInput ? decidedByInput.value : '';
+          try {
+            await apiFetch(`/projects/ai-personas/${btn.dataset.id}/decision`, {
+              method: 'POST',
+              body: JSON.stringify({ decision, decidedBy }),
+            });
+            refreshAiPersonas();
+          } catch (err) {
+            alert(err.message);
+          }
+        });
+      }
+    );
+  } catch (err) {
+    pendingContainer.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+
+  const projectId = document.getElementById('apProjectId').value.trim();
+  if (!projectId) {
+    listContainer.innerHTML = '';
+    return;
+  }
+  try {
+    const { personas } = await apiFetch(`/projects/${encodeURIComponent(projectId)}/ai-personas`);
+    listContainer.innerHTML = personas.length
+      ? personas
+          .map(
+            (p) =>
+              `<div class="card"><h4>${escapeHtml(p.name)}</h4><div>Status: ${escapeHtml(
+                p.approvalStatus
+              )}</div>${p.approvedBy ? `<div>Decided by: ${escapeHtml(p.approvedBy)}</div>` : ''}</div>`
+          )
+          .join('')
+      : '<p class="hint">No AI personas requested for this project yet.</p>';
+  } catch (err) {
+    listContainer.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupAiPersonaForm() {
+  document.getElementById('apProjectId').addEventListener('change', refreshAiPersonas);
+  document.getElementById('aiPersonaForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const projectId = document.getElementById('apProjectId').value.trim();
+    const name = document.getElementById('apName').value;
+    const purpose = document.getElementById('apPurpose').value;
+    const instructions = document.getElementById('apInstructions').value;
+    const requestedBy = document.getElementById('apRequestedBy').value;
+    try {
+      await apiFetch(`/projects/${encodeURIComponent(projectId)}/ai-personas`, {
+        method: 'POST',
+        body: JSON.stringify({ name, purpose, instructions, requestedBy }),
+      });
+      document.getElementById('apName').value = '';
+      document.getElementById('apPurpose').value = '';
+      document.getElementById('apInstructions').value = '';
+      refreshAiPersonas();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 function switchToTab(tabName) {
   const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
   if (btn) btn.click();
@@ -1517,6 +1679,9 @@ setupTabs();
 setupApiKeyBar();
 setupLangSwitcher();
 populateProviderSelect();
+setupProjectForm();
+setupProjectRouteForm();
+setupAiPersonaForm();
 setupMissionGroupForm();
 setupMissionStepForm();
 setupConnectionForm();
@@ -1538,6 +1703,8 @@ setupContentPlanForm();
 refreshMissionGroups();
 refreshConnections();
 refreshMarkets();
+refreshProjects();
+refreshAiPersonas();
 refreshAudienceProfiles();
 refreshCommissionModels();
 refreshResumes();

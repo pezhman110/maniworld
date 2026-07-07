@@ -24,7 +24,8 @@
   </header>
 
   <nav>
-    <button class="tab-btn active" data-tab="mission-control">Mission Control</button>
+    <button class="tab-btn active" data-tab="project-setup">Project Setup</button>
+    <button class="tab-btn" data-tab="mission-control">Mission Control</button>
     <button class="tab-btn" data-tab="pipeline">Pipeline Overview</button>
     <button class="tab-btn" data-tab="connections">Connections</button>
     <button class="tab-btn" data-tab="markets">Markets</button>
@@ -36,7 +37,65 @@
   </nav>
 
   <main>
-    <section id="tab-mission-control" class="tab active">
+    <section id="tab-project-setup" class="tab active">
+      <h2>Project Setup — Step 0</h2>
+      <p class="hint">
+        This is where it all begins: an external client enters the project's information and gives it a
+        name (e.g. "Freelancer"). As soon as it is named, all three acquisition routes exist for it and can
+        be switched on independently: 1) search online/offline networks and contact people directly,
+        2) stand up a page on your site and run free campaigns, 3) pull resumes from connected
+        LinkedIn/Indeed accounts. You can also list the project's must/must-not goals and standards here,
+        and request an AI persona to host online sessions — which a manager must explicitly approve before
+        it is ever allowed to run a live call.
+      </p>
+
+      <h3>Step 0 — Name the project &amp; set its goals/standards</h3>
+      <div id="projectsList" class="cards"></div>
+      <form id="projectForm">
+        <label>Project id <input id="pjId" type="text" placeholder="e.g. freelancer" required /></label>
+        <label>Project name <input id="pjName" type="text" placeholder="e.g. Freelancer" required /></label>
+        <label>Entered by (you, the external client) <input id="pjCreatedBy" type="text" placeholder="your name" required /></label>
+        <label>Goals / must &amp; must-not standards (comma separated)
+          <textarea id="pjGoals" placeholder="e.g. must contact previous employer, must not exceed daily cap, must keep score >=80"></textarea>
+        </label>
+        <button type="submit">Create project</button>
+      </form>
+
+      <h3>The three routes for this project</h3>
+      <form id="projectRouteForm">
+        <label>Project id <input id="prProjectId" type="text" placeholder="same id as above" required /></label>
+        <label>Route
+          <select id="prRoute">
+            <option value="direct-network">1. Search online/offline networks &amp; contact directly</option>
+            <option value="job-posting">2. Build a page on your site + run free campaigns</option>
+            <option value="resume-intake">3. Pull &amp; screen resumes from LinkedIn/Indeed</option>
+          </select>
+        </label>
+        <button type="submit" data-mode="activate">Activate route</button>
+        <button type="submit" data-mode="deactivate">Deactivate route</button>
+      </form>
+
+      <h3>AI persona for online sessions (requires manager approval before use)</h3>
+      <p class="hint">
+        Once contact is made and the candidate confirms, an online meeting is booked. If that meeting is to
+        be hosted by an AI persona (chosen based on this project's goals), it must be requested here and
+        approved by a manager first — it can never be used in a live session while still pending.
+      </p>
+      <form id="aiPersonaForm">
+        <label>Project id <input id="apProjectId" type="text" placeholder="same id as above" required /></label>
+        <label>Persona name <input id="apName" type="text" placeholder="e.g. Banking Recruiter Bot" required /></label>
+        <label>Purpose (aligned with project goals) <textarea id="apPurpose" required></textarea></label>
+        <label>Instructions / script <textarea id="apInstructions" required></textarea></label>
+        <label>Requested by <input id="apRequestedBy" type="text" placeholder="your name" required /></label>
+        <button type="submit">Request AI persona</button>
+      </form>
+      <div id="aiPersonasList" class="cards"></div>
+
+      <h3>Pending manager approval</h3>
+      <div id="aiPersonaPendingList" class="cards"></div>
+    </section>
+
+    <section id="tab-mission-control" class="tab">
       <h2>Mission Control — Growth Command Center</h2>
       <p class="hint">
         Goal of this module: find target accounts in a given topic/country/region, screen them,
