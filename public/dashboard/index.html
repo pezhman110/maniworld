@@ -34,6 +34,7 @@
     <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
+    <button class="tab-btn" data-tab="investor-acquisition">Investor Acquisition</button>
     <button class="tab-btn" data-tab="instagram-growth">Instagram Growth</button>
     <button class="tab-btn" data-tab="linkedin-growth">LinkedIn Growth</button>
     <button class="tab-btn" data-tab="pages-websites" data-i18n="pages.nav">Pages &amp; Websites</button>
@@ -541,6 +542,68 @@
       <div id="contentFallbackQueue" class="cards"></div>
       <h3>Instagram ads manual-fallback queue</h3>
       <div id="instagramAdsFallbackQueue" class="cards"></div>
+    </section>
+
+    <section id="tab-investor-acquisition" class="tab">
+      <h2>Investor Acquisition — Stage 1 of 5</h2>
+      <p class="hint">
+        Backend-executable engine for the first 20 advanced investor targeting/acquisition tools. Unsafe requests
+        from the original list (fake accounts, anti-detection, scraped/purchased contacts, private monitoring, and
+        face recognition matching) are not implemented; the system converts them into compliant, official-API,
+        consent-first alternatives with source proof, opt-out and audit-ready outputs.
+      </p>
+
+      <h3>Operational metrics</h3>
+      <div id="investorMetrics" class="kpi-grid"></div>
+
+      <h3>20 tools: what is actually executable now</h3>
+      <div id="investorToolsList" class="cards"></div>
+
+      <h3>Evaluate a signal before outreach</h3>
+      <form id="investorEvaluateForm">
+        <label>Source
+          <select id="invSource">
+            <option value="inbound_form">inbound_form</option>
+            <option value="owned_crm">owned_crm</option>
+            <option value="lead_gen_form">lead_gen_form</option>
+            <option value="public_business_profile">public_business_profile</option>
+            <option value="consented_event_scan">consented_event_scan</option>
+            <option value="website_consent_pixel">website_consent_pixel</option>
+            <option value="manual_event_badge_scan">manual_event_badge_scan</option>
+            <option value="private_group">private_group (blocked)</option>
+            <option value="scraped_contact">scraped_contact (blocked)</option>
+            <option value="purchased_list">purchased_list (blocked)</option>
+            <option value="fake_account">fake_account (blocked)</option>
+            <option value="anti_detection">anti_detection (blocked)</option>
+            <option value="face_recognition">face_recognition (blocked)</option>
+          </select>
+        </label>
+        <label>Source proof <input id="invSourceProof" type="text" placeholder="form id / public business page / event opt-in proof" required /></label>
+        <label>Lead name <input id="invFullName" type="text" placeholder="optional" /></label>
+        <label>Company <input id="invCompany" type="text" placeholder="optional" /></label>
+        <label>Message / signal text <textarea id="invMessage" placeholder="e.g. میخوام سرمایهگذاری کنم با سود مطمئن"></textarea></label>
+        <label>Declared interests <input id="invInterests" type="text" placeholder="investment, franchise, passive income" /></label>
+        <label>Channels <input id="invChannels" type="text" placeholder="whatsapp,email,linkedin" /></label>
+        <label>Investor amount <input id="invAmount" type="number" min="0" /></label>
+        <label><input id="invConsent" type="checkbox" /> explicit opt-in / lead-form consent</label>
+        <label><input id="invPublicBusiness" type="checkbox" /> proven public business contact</label>
+        <button type="submit" data-action="evaluate">Evaluate only</button>
+        <button type="submit" data-action="register">Register lead</button>
+      </form>
+      <div id="investorEvaluationResult" class="cards"></div>
+
+      <h3>Registered investor leads</h3>
+      <div id="investorLeadsList" class="cards"></div>
+
+      <h3>Create runnable playbook from all 20 tools</h3>
+      <form id="investorPlaybookForm">
+        <label>Playbook name <input id="invPlaybookName" type="text" value="Stage 1 investor acquisition" required /></label>
+        <label>Objective <input id="invPlaybookObjective" type="text" value="Identify, score and route qualified investors legally" required /></label>
+        <label>Region <input id="invPlaybookRegion" type="text" placeholder="AE / IR / GCC" /></label>
+        <label>Channels <input id="invPlaybookChannels" type="text" value="website,email,whatsapp,linkedin" /></label>
+        <button type="submit">Create playbook</button>
+      </form>
+      <div id="investorPlaybooksList" class="cards"></div>
     </section>
 
     <section id="tab-instagram-growth" class="tab">

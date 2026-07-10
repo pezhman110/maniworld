@@ -84,6 +84,7 @@ function applyApiKey(key, status) {
   refreshContentFallbackQueue();
   refreshInstagramAds();
   refreshInstagramAdsFallbackQueue();
+  refreshInvestorAcquisition();
   refreshInstagramGrowth();
   refreshLinkedInGrowth();
   refreshPagesWebsiteCatalog();
@@ -1178,6 +1179,207 @@ function setupPipelineTrackForm() {
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function splitInvestorCsv(value) {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildInvestorSignalPayload() {
+  const amountRaw = document.getElementById('invAmount').value;
+  return {
+    source: document.getElementById('invSource').value,
+    sourceProof: document.getElementById('invSourceProof').value,
+    fullName: document.getElementById('invFullName').value || undefined,
+    company: document.getElementById('invCompany').value || undefined,
+    message: document.getElementById('invMessage').value || undefined,
+    declaredInterests: splitInvestorCsv(document.getElementById('invInterests').value),
+    channels: splitInvestorCsv(document.getElementById('invChannels').value),
+    investorAmount: amountRaw ? Number(amountRaw) : undefined,
+    consentGranted: document.getElementById('invConsent').checked,
+    publicBusinessContact: document.getElementById('invPublicBusiness').checked,
+  };
+}
+
+function investorStatusClass(status) {
+  if (status === 'allowed' || status === 'hot') return 'connected';
+  if (status === 'blocked') return 'invalid';
+  return 'unverified';
+}
+
+function renderInvestorEvaluation(evaluation) {
+  return `<div class="card">
+    <h4>Evaluation <span class="status ${investorStatusClass(evaluation.complianceStatus)}">${escapeHtml(
+    evaluation.complianceStatus
+  )}</span></h4>
+    <div>Score: <strong>${evaluation.score}</strong> · Priority: <strong class="status ${investorStatusClass(
+    evaluation.priority
+  )}">${escapeHtml(evaluation.priority)}</strong></div>
+    <div>Intent: ${escapeHtml(evaluation.triggeredIntent)} · Persona: ${escapeHtml(evaluation.persona)}</div>
+    <div>Next: ${escapeHtml(evaluation.nextBestAction)}</div>
+    <div class="hint">Tools: ${escapeHtml(evaluation.matchedToolIds.join(', '))}</div>
+    ${
+      evaluation.blockedReasons.length
+        ? `<div class="hint">Blocked/review reasons: ${evaluation.blockedReasons.map(escapeHtml).join('; ')}</div>`
+        : ''
+    }
+  </div>`;
+}
+
+async function refreshInvestorAcquisition() {
+  await Promise.all([refreshInvestorTools(), refreshInvestorMetrics(), refreshInvestorLeads(), refreshInvestorPlaybooks()]);
+}
+
+async function refreshInvestorTools() {
+  const container = document.getElementById('investorToolsList');
+  if (!container) return;
+  try {
+    const { tools } = await apiFetch('/investor-acquisition/tools');
+    container.innerHTML = tools
+      .map(
+        (tool) => `<div class="card">
+          <h4>${tool.id}. ${escapeHtml(tool.title)}</h4>
+          <span class="status ${tool.compliance === 'ready' ? 'connected' : tool.compliance === 'replaced' ? 'invalid' : 'unverified'}">${escapeHtml(
+          tool.compliance
+        )}</span>
+          <div class="hint">${escapeHtml(tool.category)}</div>
+          <div><strong>Executable:</strong> ${tool.executableCapabilities.map(escapeHtml).join('; ')}</div>
+          ${
+            tool.blockedCapabilities.length
+              ? `<div><strong>Blocked:</strong> ${tool.blockedCapabilities.map(escapeHtml).join('; ')}</div>`
+              : ''
+          }
+          ${tool.safeReplacement ? `<div><strong>Safe replacement:</strong> ${escapeHtml(tool.safeReplacement)}</div>` : ''}
+        </div>`
+      )
+      .join('');
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load tools: ${err.message}</p>`;
+  }
+}
+
+async function refreshInvestorMetrics() {
+  const container = document.getElementById('investorMetrics');
+  if (!container) return;
+  try {
+    const { metrics } = await apiFetch('/investor-acquisition/metrics');
+    const items = [
+      ['totalLeads', 'Investor leads'],
+      ['allowed', 'Allowed'],
+      ['needsReview', 'Needs review'],
+      ['blocked', 'Blocked'],
+      ['hot', 'Hot'],
+      ['warm', 'Warm'],
+      ['cold', 'Cold'],
+      ['playbooks', 'Playbooks'],
+    ];
+    container.innerHTML = items
+      .map(([key, label]) => `<div class="kpi-card"><div class="kpi-value">${metrics[key]}</div><div class="kpi-label">${label}</div></div>`)
+      .join('');
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load metrics: ${err.message}</p>`;
+  }
+}
+
+async function refreshInvestorLeads() {
+  const container = document.getElementById('investorLeadsList');
+  if (!container) return;
+  try {
+    const { leads } = await apiFetch('/investor-acquisition/leads');
+    container.innerHTML = leads.length
+      ? leads
+          .map(
+            (lead) => `<div class="card">
+              <h4>${escapeHtml(lead.fullName || lead.company || lead.id)}</h4>
+              <div>${escapeHtml(lead.source)} · ${escapeHtml(lead.sourceProof)}</div>
+              ${renderInvestorEvaluation(lead.evaluation)}
+              <div class="hint">Plan: ${lead.outreachPlan.map(escapeHtml).join(' → ')}</div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No investor leads registered yet.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load leads: ${err.message}</p>`;
+  }
+}
+
+async function refreshInvestorPlaybooks() {
+  const container = document.getElementById('investorPlaybooksList');
+  if (!container) return;
+  try {
+    const { playbooks } = await apiFetch('/investor-acquisition/playbooks');
+    container.innerHTML = playbooks.length
+      ? playbooks
+          .map(
+            (playbook) => `<div class="card">
+              <h4>${escapeHtml(playbook.name)} (${escapeHtml(playbook.id)})</h4>
+              <div>${escapeHtml(playbook.objective)}${playbook.region ? ` · ${escapeHtml(playbook.region)}` : ''}</div>
+              <div>Channels: ${escapeHtml(playbook.channels.join(', '))}</div>
+              <div>Tools: ${escapeHtml(playbook.toolIds.join(', '))}</div>
+              <div class="hint">Stages: ${playbook.stages.map(escapeHtml).join(' → ')}</div>
+              <div class="hint">Rules: ${playbook.complianceRules.map(escapeHtml).join('; ')}</div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No investor playbooks yet.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load playbooks: ${err.message}</p>`;
+  }
+}
+
+function setupInvestorAcquisitionForms() {
+  const evaluateForm = document.getElementById('investorEvaluateForm');
+  if (evaluateForm) {
+    evaluateForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const action = e.submitter && e.submitter.dataset.action === 'register' ? 'register' : 'evaluate';
+      const resultContainer = document.getElementById('investorEvaluationResult');
+      try {
+        if (action === 'register') {
+          const { lead } = await apiFetch('/investor-acquisition/leads', {
+            method: 'POST',
+            body: JSON.stringify(buildInvestorSignalPayload()),
+          });
+          resultContainer.innerHTML = renderInvestorEvaluation(lead.evaluation);
+          refreshInvestorMetrics();
+          refreshInvestorLeads();
+        } else {
+          const { evaluation } = await apiFetch('/investor-acquisition/signals/evaluate', {
+            method: 'POST',
+            body: JSON.stringify(buildInvestorSignalPayload()),
+          });
+          resultContainer.innerHTML = renderInvestorEvaluation(evaluation);
+        }
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+
+  const playbookForm = document.getElementById('investorPlaybookForm');
+  if (playbookForm) {
+    playbookForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await apiFetch('/investor-acquisition/playbooks', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: document.getElementById('invPlaybookName').value,
+            objective: document.getElementById('invPlaybookObjective').value,
+            region: document.getElementById('invPlaybookRegion').value || undefined,
+            channels: splitInvestorCsv(document.getElementById('invPlaybookChannels').value),
+          }),
+        });
+        refreshInvestorMetrics();
+        refreshInvestorPlaybooks();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
 }
 
 const INSTAGRAM_GROWTH_KPIS = [
@@ -2363,6 +2565,7 @@ setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
 setupInstagramAdForm();
+setupInvestorAcquisitionForms();
 setupInstagramGrowthForms();
 setupLinkedInGrowthForms();
 setupPagesWebsiteForm();
@@ -2384,6 +2587,7 @@ refreshContentBriefs();
 refreshContentFallbackQueue();
 refreshInstagramAds();
 refreshInstagramAdsFallbackQueue();
+refreshInvestorAcquisition();
 refreshInstagramGrowth();
 refreshLinkedInGrowth();
 refreshPagesWebsiteCatalog();

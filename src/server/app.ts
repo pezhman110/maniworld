@@ -27,6 +27,7 @@ import {
 import { PagesWebsitesRegistry } from '../modules/pagesWebsites';
 import { InstagramLegalGrowthRegistry } from '../modules/instagramLegalGrowth';
 import { LinkedInLegalGrowthRegistry } from '../modules/linkedInLegalGrowth';
+import { InvestorAcquisitionRegistry } from '../modules/investorAcquisition';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
 import { TRANSLATIONS } from '../modules/i18n';
@@ -41,6 +42,7 @@ import { createContentStudioRouter } from './routes/contentStudioRouter';
 import { createPagesWebsitesRouter, createPublicPagesRouter } from './routes/pagesWebsitesRouter';
 import { createInstagramGrowthRouter } from './routes/instagramGrowthRouter';
 import { createLinkedInGrowthRouter } from './routes/linkedInGrowthRouter';
+import { createInvestorAcquisitionRouter } from './routes/investorAcquisitionRouter';
 
 export interface CreateAppOptions {
   credentialsStore?: IntegrationCredentialsStore;
@@ -62,6 +64,7 @@ export interface CreateAppOptions {
   pagesWebsites?: PagesWebsitesRegistry;
   instagramGrowth?: InstagramLegalGrowthRegistry;
   linkedInGrowth?: LinkedInLegalGrowthRegistry;
+  investorAcquisition?: InvestorAcquisitionRegistry;
   publishContent?: SocialPublisher;
   publishInstagramAd?: InstagramAdPublisher;
   testConnection?: ConnectionTester;
@@ -96,6 +99,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const pagesWebsites = options.pagesWebsites ?? new PagesWebsitesRegistry();
   const instagramGrowth = options.instagramGrowth ?? new InstagramLegalGrowthRegistry();
   const linkedInGrowth = options.linkedInGrowth ?? new LinkedInLegalGrowthRegistry();
+  const investorAcquisition = options.investorAcquisition ?? new InvestorAcquisitionRegistry();
   const publishContent = options.publishContent ?? createSocialPublisher();
   const publishInstagramAd = options.publishInstagramAd ?? createInstagramAdPublisher();
   const testConnection = options.testConnection ?? createConnectionTester();
@@ -139,6 +143,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api/pages-websites', auth, createPagesWebsitesRouter(pagesWebsites));
   app.use('/api/instagram-growth', auth, createInstagramGrowthRouter({ instagramGrowth }));
   app.use('/api/linkedin-growth', auth, createLinkedInGrowthRouter({ linkedInGrowth }));
+  app.use('/api/investor-acquisition', auth, createInvestorAcquisitionRouter({ investorAcquisition }));
 
   if (options.serveDashboard) {
     app.use('/dashboard', express.static(path.join(process.cwd(), 'public', 'dashboard')));
