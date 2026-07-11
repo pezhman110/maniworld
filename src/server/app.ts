@@ -27,6 +27,7 @@ import {
 import { PagesWebsitesRegistry } from '../modules/pagesWebsites';
 import { InstagramLegalGrowthRegistry } from '../modules/instagramLegalGrowth';
 import { LinkedInLegalGrowthRegistry } from '../modules/linkedInLegalGrowth';
+import { ConsentConversionAcceleratorRegistry } from '../modules/consentConversionAccelerator';
 import { InvestorAcquisitionRegistry } from '../modules/investorAcquisition';
 import { GlobexHorizonRegistry } from '../modules/globexHorizon';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
@@ -43,6 +44,7 @@ import { createContentStudioRouter } from './routes/contentStudioRouter';
 import { createPagesWebsitesRouter, createPublicPagesRouter } from './routes/pagesWebsitesRouter';
 import { createInstagramGrowthRouter } from './routes/instagramGrowthRouter';
 import { createLinkedInGrowthRouter } from './routes/linkedInGrowthRouter';
+import { createConsentConversionRouter } from './routes/consentConversionRouter';
 import { createInvestorAcquisitionRouter } from './routes/investorAcquisitionRouter';
 import { createGlobexHorizonRouter } from './routes/globexHorizonRouter';
 
@@ -66,6 +68,7 @@ export interface CreateAppOptions {
   pagesWebsites?: PagesWebsitesRegistry;
   instagramGrowth?: InstagramLegalGrowthRegistry;
   linkedInGrowth?: LinkedInLegalGrowthRegistry;
+  consentConversion?: ConsentConversionAcceleratorRegistry;
   investorAcquisition?: InvestorAcquisitionRegistry;
   globexHorizon?: GlobexHorizonRegistry;
   publishContent?: SocialPublisher;
@@ -102,6 +105,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const pagesWebsites = options.pagesWebsites ?? new PagesWebsitesRegistry();
   const instagramGrowth = options.instagramGrowth ?? new InstagramLegalGrowthRegistry();
   const linkedInGrowth = options.linkedInGrowth ?? new LinkedInLegalGrowthRegistry();
+  const consentConversion = options.consentConversion ?? new ConsentConversionAcceleratorRegistry();
   const investorAcquisition = options.investorAcquisition ?? new InvestorAcquisitionRegistry();
   const globexHorizon = options.globexHorizon ?? new GlobexHorizonRegistry();
   const publishContent = options.publishContent ?? createSocialPublisher();
@@ -147,6 +151,7 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use('/api/pages-websites', auth, createPagesWebsitesRouter(pagesWebsites));
   app.use('/api/instagram-growth', auth, createInstagramGrowthRouter({ instagramGrowth }));
   app.use('/api/linkedin-growth', auth, createLinkedInGrowthRouter({ linkedInGrowth }));
+  app.use('/api/consent-conversion', auth, createConsentConversionRouter({ accelerator: consentConversion }));
   app.use('/api/investor-acquisition', auth, createInvestorAcquisitionRouter({ investorAcquisition }));
   app.use('/api/globex-horizon', auth, createGlobexHorizonRouter({ globexHorizon }));
 
