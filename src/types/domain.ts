@@ -1,0 +1,1387 @@
+/**
+ * Shared domain types for the Mani World lead-to-booking automation pipeline.
+ *
+ * This pipeline covers the full journey:
+ *  1. Lead intake (standard form + UTM + consent + anti-spam)
+ *  2. Phone validation & best-number ranking
+ *  3. Lead scoring
+ *  4. Channel/account mapping (per social platform)
+ *  5. Message & call scripts (versioned, A/B tested)
+ *  6. Sales funnel automation (stages, SLA, reminders, escalation)
+ *  7. Booking (hall / online meeting) with conflict prevention
+ *  8. Video/in-person session preparation (roles, scenario, checklist)
+ *  9. Unified interaction log (online + offline)
+ * 10. Reporting & KPIs
+ * 11. Security & compliance (RBAC, data retention)
+ */
+
+export type Channel =
+  | 'google'
+  | 'x'
+  | 'telegram'
+  | 'whatsapp'
+  | 'instagram'
+  | 'linkedin'
+  | 'facebook'
+  | 'youtube'
+  | 'meta-ads'
+  | 'email'
+  | 'forum'
+  | 'phone'
+  | 'in-person'
+  | 'website';
+
+export type ConsentStatus = 'granted' | 'declined' | 'pending';
+
+export interface UtmParams {
+  source?: string;
+  medium?: string;
+  campaign?: string;
+  term?: string;
+  content?: string;
+}
+
+export interface RawLeadInput {
+  fullName: string;
+  phone: string;
+  email?: string;
+  channel: Channel;
+  message?: string;
+  utm?: UtmParams;
+  consent: ConsentStatus;
+  /** Honeypot field: must stay empty. Non-empty means a bot filled the form. */
+  honeypot?: string;
+  /** Timestamp (ms) when the form was rendered, used for time-trap anti-spam. */
+  formRenderedAt?: number;
+  /** Timestamp (ms) when the form was submitted. */
+  submittedAt?: number;
+}
+
+export interface Lead {
+  id: string;
+  fullName: string;
+  phone: string;
+  normalizedPhone: string;
+  email?: string;
+  channel: Channel;
+  message?: string;
+  utm?: UtmParams;
+  consent: ConsentStatus;
+  createdAt: number;
+  score?: number;
+  scoreBreakdown?: ScoreBreakdown;
+  isDuplicate: boolean;
+  isSpam: boolean;
+}
+
+export interface ScoreBreakdown {
+  channelWeight: number;
+  hasEmail: number;
+  messageQuality: number;
+  utmQuality: number;
+  consentGranted: number;
+  total: number;
+}
+
+export type AccountRole = 'owner' | 'responder' | 'moderator' | 'viewer';
+
+export interface ChannelAccount {
+  channel: Channel;
+  accountHandle: string;
+  owner: string;
+  role: AccountRole;
+  goal: string;
+  kpi: string;
+  accessLevel: 'admin' | 'editor' | 'read-only';
+  active: boolean;
+}
+
+export type ScriptStage =
+  | 'first-contact'
+  | 'follow-up-1'
+  | 'follow-up-2'
+  | 'qualification'
+  | 'booking-offer'
+  | 'reminder'
+  | 'no-show-recovery';
+
+export interface MessageScript {
+  id: string;
+  stage: ScriptStage;
+  channel: Channel;
+  version: number;
+  variantLabel: string;
+  body: string;
+  delayHoursFromPreviousStage: number;
+  active: boolean;
+}
+
+export type FunnelStage =
+  | 'new-lead'
+  | 'contacted'
+  | 'qualified'
+  | 'meeting-scheduled'
+  | 'meeting-completed'
+  | 'booked'
+  | 'lost';
+
+export interface FunnelSlaRule {
+  stage: FunnelStage;
+  maxHoursInStage: number;
+  escalateToRole: AccountRole;
+}
+
+export interface FunnelEvent {
+  leadId: string;
+  fromStage: FunnelStage | null;
+  toStage: FunnelStage;
+  timestamp: number;
+  actor: string;
+  note?: string;
+}
+
+export type BookingType = 'hall' | 'online-meeting' | 'phone-call' | 'presentation';
+
+export interface BookingSlot {
+  id: string;
+  leadId: string;
+  type: BookingType;
+  startsAt: number;
+  endsAt: number;
+  resource: string;
+  confirmed: boolean;
+}
+
+export type VideoSessionRole = 'primary-presenter' | 'backup-presenter' | 'quality-observer';
+
+export interface VideoSessionAssignment {
+  bookingId: string;
+  personName: string;
+  role: VideoSessionRole;
+}
+
+export type SessionScenarioStep = 'opening' | 'discovery' | 'offer' | 'next-step';
+
+export interface SessionChecklistItem {
+  phase: 'pre' | 'during' | 'post';
+  label: string;
+  done: boolean;
+}
+
+export interface VideoSessionPlan {
+  bookingId: string;
+  assignments: VideoSessionAssignment[];
+  scenario: SessionScenarioStep[];
+  checklist: SessionChecklistItem[];
+  recordingConsentGiven: boolean;
+}
+
+export type InteractionType =
+  | 'message'
+  | 'call'
+  | 'meeting'
+  | 'in-person'
+  | 'paper-form'
+  | 'email';
+
+export interface InteractionLogEntry {
+  id: string;
+  leadId: string;
+  channel: Channel;
+  type: InteractionType;
+  direction: 'inbound' | 'outbound';
+  timestamp: number;
+  summary: string;
+  actor: string;
+}
+
+export interface FunnelMetrics {
+  totalLeads: number;
+  responseRate: number;
+  meetingRate: number;
+  bookingRate: number;
+  costPerLead?: number;
+}
+
+export type UserRole = 'admin' | 'sales' | 'agent' | 'viewer';
+
+export interface AccessControlEntry {
+  userId: string;
+  role: UserRole;
+  allowedActions: string[];
+}
+
+export interface DataRetentionPolicy {
+  entity: 'lead' | 'interaction' | 'recording';
+  retentionDays: number;
+}
+
+/**
+ * Business lines ("markets") the sales org runs at once. Each one gets its
+ * own input panel (lead intake) and output (reporting) as requested:
+ *  - salon-women: women's beauty salon services (per-branch, multi-salon)
+ *  - home-service: at-home beauty service bookings
+ *  - business-buying: helping clients buy a ready-made business/kiosk
+ *  - business-selling: helping clients sell a ready-made business/kiosk
+ *  - investment: salon investment opportunities
+ */
+export type MarketType =
+  | 'salon-women'
+  | 'home-service'
+  | 'business-buying'
+  | 'business-selling'
+  | 'investment';
+
+/** Daily operating window, expressed as local hours (0-24, may equal 24 for midnight). */
+export interface WorkingHours {
+  startHour: number;
+  endHour: number;
+}
+
+export type LocationKind = 'salon-branch' | 'office';
+
+/**
+ * A physical location tied to a market: a salon branch (there can be many,
+ * e.g. "Salon 1", "Salon 2", ...) or the company office (currently a single
+ * office with a sales team).
+ */
+export interface Location {
+  id: string;
+  kind: LocationKind;
+  market: MarketType;
+  name: string;
+  address: string;
+  workingHours: WorkingHours;
+  /** Number of salespeople/staff assigned to this location (e.g. office = 30 sellers). */
+  staffCount?: number;
+  active: boolean;
+}
+
+/** Booking outcome types tracked toward the per-market daily targets. */
+export type TargetMetric =
+  | 'confirmed-booking'
+  | 'online-session'
+  | 'in-person-meeting'
+  | 'online-contact';
+
+/**
+ * A minimum/maximum daily target for one market + metric combination.
+ *
+ * `maxPerDay` is optional: some targets (e.g. investment online-session,
+ * "70+/day") have no ceiling. Leave it `undefined` rather than using
+ * `Infinity` — every consumer of this rule must treat "no cap" as an
+ * explicit, first-class case instead of doing arithmetic on `Infinity`.
+ */
+export interface MarketTargetRule {
+  market: MarketType;
+  metric: TargetMetric;
+  minPerDay: number;
+  maxPerDay?: number;
+}
+
+/** Overall pacing status against the floor (min) target. */
+export type PacingStatus = 'below-target' | 'on-track' | 'above-max' | 'missed';
+
+/** A single hour-of-day weight, e.g. `{ hour: 18, weight: 3 }` = 3x an average hour. */
+export interface HourlyWeight {
+  hour: number;
+  weight: number;
+}
+
+/** A full-day hourly demand curve for a market, used instead of a linear/uniform pacing assumption. */
+export type HourlyWeightCurve = HourlyWeight[];
+
+/** Real-time/hourly pacing snapshot for one market + metric against its target. */
+export interface MarketPacingReport {
+  market: MarketType;
+  metric: TargetMetric;
+  minPerDay: number;
+  /** Undefined when the target has no stretch ceiling (e.g. "70+/day"). */
+  maxPerDay?: number;
+  achievedSoFar: number;
+  hoursElapsed: number;
+  hoursRemaining: number;
+  /** Expected-by-now count against the floor (min), using the hourly weight curve. */
+  expectedByNowMin: number;
+  /** Expected-by-now count against the stretch target (max). Undefined when there's no max. */
+  expectedByNowMax?: number;
+  onTrackForMin: boolean;
+  /** On track for the stretch target. Undefined when there's no max. */
+  onTrackForMax?: boolean;
+  remainingNeededForMin: number;
+  /** Remaining needed to reach the stretch target. Undefined when there's no max. */
+  remainingNeededForMax?: number;
+  requiredPerRemainingHour: number;
+  isBelowTarget: boolean;
+  isAboveMax: boolean;
+  /**
+   * Explicit status replacing `Infinity`: when the working window has closed
+   * (`hoursRemaining === 0`) and the floor wasn't reached, status is
+   * `'missed'` rather than a `requiredPerRemainingHour` of `Infinity`.
+   */
+  status: PacingStatus;
+}
+
+/** A single day's holiday/closure override for the working calendar. */
+export interface Holiday {
+  /** ISO date (YYYY-MM-DD), interpreted in the Asia/Dubai timezone. */
+  date: string;
+  label: string;
+  /** Fully closed (e.g. public holiday). Mutually exclusive with `adjustedHours`. */
+  closed?: boolean;
+  /** Reduced/shifted hours for the day (e.g. Ramadan, Friday half-day). */
+  adjustedHours?: WorkingHours;
+}
+
+/** One weekday's default working-hours override (0 = Sunday .. 6 = Saturday). */
+export interface WeekdayOverride {
+  weekday: number;
+  workingHours?: WorkingHours;
+  closed?: boolean;
+}
+
+/** A per-branch or per-sales-rep breakdown of a market/metric target. */
+export interface BranchRepTarget {
+  market: MarketType;
+  metric: TargetMetric;
+  locationId: string;
+  repId?: string;
+  minPerDay: number;
+  maxPerDay?: number;
+}
+
+/** Rollup of achieved-vs-target for one branch or rep. */
+export interface RollupEntry {
+  locationId: string;
+  locationName?: string;
+  repId?: string;
+  minPerDay: number;
+  maxPerDay?: number;
+  achievedSoFar: number;
+  gapToMin: number;
+  percentOfMin: number;
+}
+
+export type ComparisonPeriod = 'yesterday' | 'last-week' | 'same-day-last-month';
+
+/** "2x yesterday" / "half of last week" style delta comparison. */
+export interface DeltaComparison {
+  period: ComparisonPeriod;
+  previousValue: number;
+  currentValue: number;
+  /** currentValue / previousValue. `null` when previousValue is 0 (undefined ratio, not Infinity). */
+  ratio: number | null;
+  direction: 'up' | 'down' | 'flat';
+  /** Human-readable label, e.g. "2.0x yesterday" or "0.5x (half of) last week". */
+  label: string;
+}
+
+/** Given the current pace, where will this metric land by end of the working day? */
+export interface RunRateProjection {
+  currentRatePerHour: number;
+  hoursRemaining: number;
+  projectedAdditional: number;
+  projectedEndOfDay: number;
+  projectedPercentOfMin: number;
+  /** Undefined when there's no max target. */
+  projectedPercentOfMax?: number;
+}
+
+export type MultiplierStatus = 'on-track' | 'needs-boost' | 'missed' | 'no-remaining-time';
+
+/** The speed-up factor needed for the rest of the day to still hit the floor target. */
+export interface RequiredMultiplier {
+  currentRatePerHour: number;
+  requiredRatePerHour: number;
+  /** requiredRatePerHour / currentRatePerHour. `null` when currentRatePerHour is 0. */
+  multiplier: number | null;
+  status: MultiplierStatus;
+}
+
+export type ThresholdAlertLevel = 'red' | 'blue' | 'none';
+
+/** Threshold alert: red = badly behind pace, blue = well ahead (reallocate capacity). */
+export interface ThresholdAlert {
+  level: ThresholdAlertLevel;
+  message: string;
+}
+
+/** One point in a 7-day (or N-day) trend sparkline. */
+export interface TrendPoint {
+  date: string;
+  value: number;
+}
+
+/** Funnel conversion metrics for one step of the pipeline, per market. */
+export interface FunnelStepMetrics {
+  stage: FunnelStage;
+  count: number;
+  conversionFromPrevious: number | null;
+  conversionFromStart: number;
+}
+
+/** How well a market's leads convert, broken down by acquisition channel. */
+export interface ChannelBreakdownEntry {
+  channel: Channel;
+  totalLeads: number;
+  respondedCount: number;
+  meetingCount: number;
+  bookingCount: number;
+  responseRate: number;
+  bookingRate: number;
+}
+
+export type Locale = 'en' | 'fa' | 'ar';
+
+// ---------------------------------------------------------------------------
+// Configurable targets, scheduling/assignment, service lines & integrations
+// ---------------------------------------------------------------------------
+
+export type TargetOverridePeriod = 'daily' | 'weekly';
+
+/**
+ * A manager-editable override for a market/branch/line target, so targets
+ * are no longer hardcoded: it can replace the min/max for a whole market,
+ * one branch, or one sales rep/line, for a single day or every week.
+ */
+export interface TargetOverride {
+  id: string;
+  market: MarketType;
+  metric: TargetMetric;
+  period: TargetOverridePeriod;
+  /** Required when period === 'daily': ISO date (YYYY-MM-DD) the override applies to. */
+  date?: string;
+  /** Required when period === 'weekly': 0 (Sunday) .. 6 (Saturday) the override applies to. */
+  weekday?: number;
+  /** Restricts the override to one branch/location. Omit to apply market-wide. */
+  locationId?: string;
+  /** Restricts the override to one sales rep/line. Omit to apply to the whole branch/market. */
+  repId?: string;
+  minPerDay?: number;
+  maxPerDay?: number;
+  note?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A bookable meeting slot at a physical location (e.g. office in-person meetings). */
+export interface MeetingSlot {
+  id: string;
+  locationId: string;
+  startsAt: number;
+  endsAt: number;
+  capacity: number;
+  bookedCount: number;
+}
+
+/** Who in-person meetings at a given office/location get routed to by default. */
+export interface InPersonAssigneeRule {
+  locationId: string;
+  assigneeName: string;
+  assigneeContact: string;
+  notes?: string;
+}
+
+/** Who receives the results/summary after an online session for a market is executed. */
+export interface OnlineResultRecipientRule {
+  market: MarketType;
+  recipientName: string;
+  recipientContact: string;
+  notes?: string;
+}
+
+/** One bookable service line inside a branch (e.g. "Hair" / "Nails" at Salon 1), with its own hours. */
+export interface ServiceLine {
+  id: string;
+  locationId: string;
+  market: MarketType;
+  name: string;
+  workingHours: WorkingHours;
+  active: boolean;
+}
+
+/** Website/pricing integration hookup for a market, so the dashboard can link out to live prices. */
+export interface WebsiteIntegrationConfig {
+  market: MarketType;
+  websiteUrl: string;
+  priceListUrl?: string;
+  syncPricesAutomatically: boolean;
+  notes?: string;
+}
+
+export type ChannelRegistryEntryType = 'website' | 'social' | 'ads-account' | 'other';
+
+/**
+ * A manually-added tracking target (site/social/ads account/etc.) so a
+ * manager can tell the system what to watch besides whatever it discovers
+ * automatically.
+ */
+export interface ChannelRegistryEntry {
+  id: string;
+  label: string;
+  url: string;
+  type: ChannelRegistryEntryType;
+  addedBy: string;
+  notes?: string;
+  active: boolean;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
+// Freelancer recruitment & placement module
+// ---------------------------------------------------------------------------
+
+/**
+ * A sales-manager-authored recruitment scheme for sourcing freelancers into
+ * one market/service line. It carries the commission split the freelancer
+ * will be contracted on: a direct percentage on their own clients' revenue,
+ * and a percentage on any *other* salon service their client buys while
+ * visiting for the freelancer's own line.
+ */
+export interface RecruitmentPlan {
+  id: string;
+  market: MarketType;
+  line: string;
+  createdBy: string;
+  /** % of revenue from the freelancer's own clients that goes to the salon. */
+  directCommissionPercent: number;
+  /** % of revenue the salon keeps when the freelancer's client buys another salon service. */
+  otherServicesCommissionPercent: number;
+  /** Salons this plan is allowed to place freelancers into. */
+  targetLocationIds: string[];
+  active: boolean;
+  notes?: string;
+  createdAt: number;
+}
+
+export type JobBoard = 'indeed' | 'linkedin';
+
+/** A job ad posted to an external job board for a recruitment plan. */
+export interface FreelancerJobPosting {
+  id: string;
+  board: JobBoard;
+  planId: string;
+  title: string;
+  url?: string;
+  postedAt: number;
+  active: boolean;
+}
+
+export type FreelancerSourceChannel = 'indeed' | 'linkedin' | 'manual-list' | 'referral' | 'inbound';
+
+export type FreelancerStatus =
+  | 'sourced'
+  | 'applied'
+  | 'screening'
+  | 'interview-scheduled'
+  | 'interviewed'
+  | 'passed'
+  | 'failed'
+  | 'contract-offered'
+  | 'hired'
+  | 'rejected'
+  | 'active-account';
+
+/** One weekly recurring free-time window a freelancer says they can work (0 Sunday .. 6 Saturday). */
+export interface FreelancerAvailabilitySlot {
+  weekday: number;
+  startHour: number;
+  endHour: number;
+}
+
+/** A freelancer candidate/hire, tracked from sourcing through to an active salon account. */
+export interface Freelancer {
+  id: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  /** Service line specialty, e.g. "nails", "hair" (matches ServiceLine.name). */
+  line: string;
+  source: FreelancerSourceChannel;
+  resumeUrl?: string;
+  resumeSummary?: string;
+  /** Existing client count the freelancer says they can bring, used for capacity planning. */
+  clientCount?: number;
+  availability: FreelancerAvailabilitySlot[];
+  status: FreelancerStatus;
+  createdAt: number;
+  notes?: string;
+}
+
+/** Per-salon-per-line service capacity, so the system can compute daily client throughput. */
+export interface SalonLineCapacity {
+  locationId: string;
+  line: string;
+  /** Minutes required to serve one client on this line (e.g. 120 for a nail "call"/appointment). */
+  minutesPerClient: number;
+  /** How many freelancers/chairs can run this line in parallel at this salon. */
+  parallelSlots: number;
+}
+
+/** One allocated day for a freelancer at a specific salon, computed from availability + capacity. */
+export interface FreelancerScheduleAllocation {
+  locationId: string;
+  weekday: number;
+  startHour: number;
+  endHour: number;
+  clientsServed: number;
+}
+
+/** A weekly placement plan covering a freelancer's full client load across one or more salons. */
+export interface FreelancerCapacityPlan {
+  freelancerId: string;
+  clientCount: number;
+  allocations: FreelancerScheduleAllocation[];
+  /** True when the allocations' total weekly client capacity covers `clientCount`. */
+  fullyCovered: boolean;
+  /** Remaining clients per week that could not be scheduled with current availability/capacity. */
+  uncoveredClientCount: number;
+}
+
+export type InterviewOutcome = 'pending' | 'passed' | 'failed';
+
+/** An in-salon (or online) interview outcome, recorded from the salon's own dashboard. */
+export interface FreelancerInterviewRecord {
+  freelancerId: string;
+  locationId: string;
+  scheduledAt: number;
+  outcome: InterviewOutcome;
+  recordedBy?: string;
+  notes?: string;
+}
+
+export type HireDecision = 'hired' | 'rejected';
+
+/** Final hire/reject decision, handed off to HR once recorded. */
+export interface HireDecisionRecord {
+  freelancerId: string;
+  decision: HireDecision;
+  decidedBy: string;
+  decidedAt: number;
+  offerLetterText?: string;
+  /** True once the candidate's previous employer was contacted/confirmed; required before a "hired" decision. */
+  referenceCheckConfirmed?: boolean;
+}
+
+/** A signed commission contract for a hired freelancer, derived from a RecruitmentPlan. */
+export interface FreelancerContract {
+  id: string;
+  freelancerId: string;
+  planId: string;
+  directCommissionPercent: number;
+  otherServicesCommissionPercent: number;
+  signedAt: number;
+  active: boolean;
+}
+
+/** A notification to be sent as part of the hire/onboarding handoff (HR, manager, freelancer, salon). */
+export interface HireNotification {
+  recipientRole: 'hr' | 'sales-manager' | 'freelancer' | 'salon';
+  recipientContact: string;
+  subject: string;
+  body: string;
+}
+
+/** The freelancer's converted, active resource account once hired and onboarded. */
+export interface StaffAccount {
+  id: string;
+  freelancerId: string;
+  fullName: string;
+  line: string;
+  market: MarketType;
+  contractId: string;
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Presentation & online-consultation campaign types.
+ *
+ * Covers the fully-independent "presentation session with online
+ * consultation" module: an admin-editable audience/target-text profile
+ * (e.g. influencer / company / group / bank), the goals that change
+ * with the audience, the commission/collaboration model tied to a
+ * vertical or profile, how a collaborator's resume/CV was sourced
+ * (Indeed, LinkedIn, or a manually supplied link), and a single-page
+ * landing site the admin can point at a custom domain with freely
+ * editable content blocks (words/sentences/addresses).
+ */
+
+/**
+ * Which acquisition route a given audience group runs on:
+ *  - 'direct-network': search a social/professional network for matching accounts, qualify,
+ *    contact in-platform, convert to email/phone, contact directly, invite online, then decide.
+ *  - 'job-posting': publish a job ad + single-page landing site, screen applicants, invite them.
+ *  - 'resume-intake': pull resumes from external sources (LinkedIn/Indeed/manual), screen, then
+ *    continue the same as 'job-posting'.
+ */
+export type AudienceRoute = 'direct-network' | 'job-posting' | 'resume-intake';
+
+/**
+ * How a lead/candidate first entered the pipeline. Used to automatically
+ * derive which `AudienceRoute` (and therefore which policy and workflow)
+ * they should be worked through, instead of requiring a manual pick:
+ *  - 'network-search': found by searching a social/professional network for matching accounts.
+ *  - 'job-application': applied to a published job ad / campaign / single-page landing site.
+ *  - 'resume-submission': submitted (or had submitted on their behalf) a resume/CV or other data.
+ */
+export type IntakeSource = 'network-search' | 'job-application' | 'resume-submission';
+
+/** The working-hours window (24h, local) allowed for outreach/visits for a given group. */
+export interface WorkingHoursWindow {
+  startHour: number;
+  endHour: number;
+}
+
+/** A manager-editable audience/target segment: who the presentation is aimed at and why. */
+export interface AudienceProfile {
+  id: string;
+  /** Human label, e.g. "Influencers", "Banking sector", "Corporate group". */
+  label: string;
+  /** The text shown to this audience (changes per audience: "influencer" vs "company" vs "group" vs "bank"...). */
+  targetText: string;
+  /** Goals for this audience; changes together with the audience (e.g. banking → compliance-first goals). */
+  goals: string[];
+  vertical?: string;
+  /** Which acquisition route this group is worked through; optional so existing profiles are unaffected. */
+  route?: AudienceRoute;
+  /** Countries/regions this group should be sourced from/targeted in, e.g. ["Iran-Tehran", "UAE-Dubai"]. */
+  regions?: string[];
+  /** Optional daily outreach/contact ceiling for this group; undefined means no cap. */
+  dailyCap?: number;
+  /** Optional allowed working-hours window for outreach/visits for this group. */
+  workingHours?: WorkingHoursWindow;
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Project (step 0) types.
+ *
+ * The very first step of the whole pipeline: an external person (the
+ * client/manager placing the request) enters the project's information and
+ * gives it a name (e.g. "Freelancer"). Once named, the system opens exactly
+ * three parallel acquisition routes for that project - one per
+ * `AudienceRoute` - each of which can be switched on independently:
+ *  1. 'direct-network' - search online/offline networks for matching people
+ *     and contact them directly.
+ *  2. 'job-posting' - stand up a page on the client's own site/domain and
+ *     run (free) campaigns.
+ *  3. 'resume-intake' - pull submitted resumes from job-board accounts
+ *     (LinkedIn/Indeed) the client connects, and screen them.
+ * A project also tracks who is allowed to run AI-hosted online interviews
+ * on its behalf, via `AIInterviewPersona` (see below).
+ */
+
+/** One of the project's three acquisition routes and whether it has been switched on yet. */
+export interface ProjectRouteState {
+  route: AudienceRoute;
+  active: boolean;
+  activatedAt?: number;
+}
+
+/** A project as entered by the external client/manager in step 0: a name plus its goals/standards. */
+export interface Project {
+  id: string;
+  /** The name the external client chose for this project, e.g. "Freelancer". */
+  name: string;
+  /** The must/should goals and standards this project is run against (feeds compliance & scoring). */
+  goals: string[];
+  /** Who (the external client) entered this project's information. */
+  createdBy: string;
+  /** Links this project to the matching `AudienceProfile` group once one is created for it, if any. */
+  audienceProfileId?: string;
+  /** Exactly one state per `AudienceRoute`, always created together so all three routes are always visible. */
+  routes: ProjectRouteState[];
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Whether a manager has cleared an AI persona to actually host an online
+ * interview/consultation on the project's behalf. An AI persona can never
+ * be used in a live session while still 'pending-manager-approval'.
+ */
+export type AIPersonaApprovalStatus = 'pending-manager-approval' | 'approved' | 'rejected';
+
+/** A requested AI persona/agent that would speak with prospects during an online session, tied to a project's goals. */
+export interface AIInterviewPersona {
+  id: string;
+  projectId: string;
+  /** Human label for the persona, e.g. "Banking Recruiter Bot". */
+  name: string;
+  /** What this persona is meant to accomplish in the call, aligned with the project's goals. */
+  purpose: string;
+  /** The behavior/script instructions this persona must follow. */
+  instructions: string;
+  requestedBy: string;
+  approvalStatus: AIPersonaApprovalStatus;
+  approvedBy?: string;
+  decidedAt?: number;
+  createdAt: number;
+}
+
+/**
+ * Compliance/policy types.
+ *
+ * Each acquisition route (and, separately, how any interviewer/session
+ * host must conduct themselves) is governed by an explicit, admin-editable
+ * list of "must" and "must-not" statements. The list is set once, then
+ * re-confirmed (unchanged or revised) at the start of every later outreach
+ * cycle, never silently assumed to still apply.
+ */
+export type CompliancePolicyRuleKind = 'must' | 'must-not';
+
+/** A single allowed ("must") or forbidden ("must-not") action/requirement. */
+export interface CompliancePolicyRule {
+  id: string;
+  kind: CompliancePolicyRuleKind;
+  text: string;
+}
+
+/**
+ * What a policy governs:
+ *  - 'route': the must/must-not rules for a whole acquisition route (optionally narrowed to one audience profile).
+ *  - 'interview-conduct': how the person running online/in-person sessions for that route must behave.
+ */
+export type CompliancePolicyScope = 'route' | 'interview-conduct';
+
+/** A versioned, admin-editable must/must-not policy, re-confirmed at the start of every outreach cycle. */
+export interface CompliancePolicy {
+  id: string;
+  scope: CompliancePolicyScope;
+  /** Which acquisition route this policy applies to. */
+  route: AudienceRoute;
+  /** Optionally narrows the policy to a single audience profile instead of the whole route. */
+  audienceProfileId?: string;
+  rules: CompliancePolicyRule[];
+  /** Bumped every time the rule set is revised (not on a same-as-before re-confirmation). */
+  version: number;
+  /** When the rules were last confirmed (same or revised) as still in effect. */
+  lastConfirmedAt: number;
+  createdAt: number;
+  active: boolean;
+}
+
+export type CommissionModelType = 'percentage' | 'flat' | 'tiered';
+
+export interface CommissionTier {
+  upToCount?: number;
+  rate: number;
+}
+
+/** A commission/collaboration model, optionally scoped to one audience profile or vertical (e.g. banking changes the whole plan). */
+export interface CommissionModel {
+  id: string;
+  label: string;
+  type: CommissionModelType;
+  /** Percentage (0-100) or flat amount, depending on `type`. Ignored when `type` is 'tiered'. */
+  rate?: number;
+  tiers?: CommissionTier[];
+  audienceProfileId?: string;
+  notes?: string;
+  createdAt: number;
+  active: boolean;
+}
+
+export type ResumeSource = 'indeed' | 'linkedin' | 'manual-link' | 'upload';
+
+/** Where a collaborator/candidate's resume/CV came from, manually recorded or linked. */
+export interface ResumeIntake {
+  id: string;
+  candidateName: string;
+  source: ResumeSource;
+  url?: string;
+  audienceProfileId?: string;
+  notes?: string;
+  createdAt: number;
+}
+
+/** A manually-added, free-form content block for a landing page (word, sentence, or address). */
+export interface LandingPageContentBlock {
+  label: string;
+  content: string;
+}
+
+/** A single-page site the admin can request at a chosen path/domain, tied to an audience profile. */
+export interface LandingPageSite {
+  id: string;
+  slug: string;
+  /** Optional custom domain this page should be served on once hosted, e.g. "consult.example.com". */
+  domain?: string;
+  audienceProfileId?: string;
+  heroText: string;
+  contentBlocks: LandingPageContentBlock[];
+  /** Field names the page's lead-capture form should collect, e.g. ["fullName", "phone", "company"]. */
+  leadFormFields: string[];
+  createdAt: number;
+  active: boolean;
+}
+
+/**
+ * Prospect outreach pipeline types.
+ *
+ * Covers the "search for accounts matching our plan on a social/professional
+ * network (influencer / freelancer / banking), score the match, and once it
+ * crosses 80% work the account all the way to a signed contract" flow:
+ * source -> qualify (>=80%) -> contact in the account's own environment ->
+ * convert the account to an email/phone -> direct contact -> invite to an
+ * online consultation (with a script) -> invite to the salon/office (with
+ * a controlled time slot) -> hand the approved list to the responsible
+ * person -> approve/reject -> send the contract.
+ */
+
+export type OutreachPlatform = 'instagram' | 'linkedin' | 'telegram' | 'x' | 'website' | 'bank-portal' | 'other';
+
+export type ProspectStatus =
+  | 'sourced'
+  | 'qualified'
+  | 'disqualified'
+  | 'platform-contacted'
+  | 'contact-converted'
+  | 'direct-contacted'
+  | 'online-invited'
+  | 'online-completed'
+  | 'online-no-show'
+  | 'in-person-invited'
+  | 'in-person-completed'
+  | 'in-person-no-show'
+  | 'pending-approval'
+  | 'approved'
+  | 'rejected'
+  | 'contract-sent';
+
+/** The online-consultation invite: a scheduled time plus the combined (default + manually-added) script used on the call. */
+export interface OnlineSessionInvite {
+  scheduledAt: number;
+  script: string;
+  /** The AI persona conducting the call, if any. Must reference an `AIInterviewPersona` already `approved` by a manager. */
+  aiPersonaId?: string;
+  outcome?: 'completed' | 'no-show';
+}
+
+/** The in-person invite to the salon/office, with the controlled time slot the requirement calls for. */
+export interface InPersonVisit {
+  locationId: string;
+  scheduledAt: number;
+  durationMinutes: number;
+  outcome?: 'completed' | 'no-show';
+}
+
+/** The hand-off to the responsible person who must approve a prospect before a contract is sent. */
+export interface ApprovalRecord {
+  responsibleContact: string;
+  submittedAt: number;
+  decision?: 'approved' | 'rejected';
+  decidedBy?: string;
+  decidedAt?: number;
+}
+
+/** The mandatory pre-hire check that the candidate's previous employer was contacted, required before a contract is sent. */
+export interface ReferenceCheckRecord {
+  contactedPreviousEmployer: boolean;
+  confirmedAt: number;
+  confirmedBy?: string;
+  notes?: string;
+}
+
+/**
+ * A candidate account found on a social/professional network (or banking
+ * portal) while searching for matches against a recruitment plan
+ * (`RecruitmentPlan.id`) and/or an audience profile.
+ */
+export interface Prospect {
+  id: string;
+  planId: string;
+  audienceProfileId?: string;
+  platform: OutreachPlatform;
+  accountHandle: string;
+  displayName?: string;
+  /** How well this account matches the plan's criteria, 0-100; only >=80 is auto-qualified for outreach. */
+  matchScore: number;
+  status: ProspectStatus;
+  email?: string;
+  phone?: string;
+  /** The message sent inside the account's own platform (e.g. an Instagram/LinkedIn DM), before contact details are known. */
+  platformMessage?: string;
+  directOutreachChannel?: 'email' | 'phone';
+  directOutreachMessage?: string;
+  onlineSession?: OnlineSessionInvite;
+  inPersonVisit?: InPersonVisit;
+  approval?: ApprovalRecord;
+  /** Must be recorded (with `contactedPreviousEmployer: true`) before a contract can be sent. */
+  referenceCheck?: ReferenceCheckRecord;
+  notes?: string;
+  createdAt: number;
+}
+
+/**
+ * Post-contract duty-scope (شرح وظیفه) types.
+ *
+ * Once a contract is sent (`Prospect.status === 'contract-sent'`), any
+ * network partner - influencer, bank, or otherwise - is given a concrete
+ * job description tied to the services/compensation they receive, e.g.
+ * "visit 2 salons per day". Actual visits/check-ins are then logged and
+ * rolled up into a weekly compliance report so the responsible manager can
+ * monitor whether the agreed cadence is being kept.
+ */
+
+export type DutyPeriod = 'day' | 'week';
+
+/**
+ * A minimum-headcount/relationship-count quota agreed as a contract term,
+ * e.g. "at least 40 active clients", "at least 30 bank experts in the
+ * network", or "at least 50 salons connected". `metric` is a free-form
+ * label (the same string is used when recording readings against it).
+ */
+export interface DutyQuota {
+  metric: string;
+  minCount: number;
+}
+
+/** A point-in-time reading of how many are currently counted against a quota metric. */
+export interface DutyQuotaReading {
+  id: string;
+  dutyScopeId: string;
+  metric: string;
+  count: number;
+  recordedAt: number;
+  notes?: string;
+}
+
+/** Compliance status for a single quota metric, comparing the latest reading to the agreed minimum. */
+export interface DutyQuotaStatus {
+  metric: string;
+  minCount: number;
+  currentCount: number;
+  compliant: boolean;
+  deficit: number;
+  lastRecordedAt?: number;
+}
+
+/** The post-contract job description agreed for a given prospect/network partner. */
+export interface DutyScope {
+  id: string;
+  prospectId: string;
+  locationId?: string;
+  /** How many visits/actions are expected per `period`, e.g. 2 per day. */
+  visitsPerPeriod: number;
+  period: DutyPeriod;
+  /** Salon services this duty scope is compensated against, e.g. ["manicure", "hair"]. */
+  servicesCovered: string[];
+  /** Optional commission/compensation percentage tied to this duty scope. */
+  commissionPercent?: number;
+  /**
+   * Optional contract-term headcount/relationship quotas, e.g. "must
+   * maintain at least 40 active clients" or "at least 30 bank experts in
+   * the network".
+   */
+  quotas?: DutyQuota[];
+  notes?: string;
+  definedAt: number;
+  active: boolean;
+}
+
+/** A single recorded visit/check-in against a duty scope. */
+export interface DutyCheckIn {
+  id: string;
+  dutyScopeId: string;
+  checkedInAt: number;
+  locationId?: string;
+  notes?: string;
+}
+
+/** Weekly roll-up comparing the agreed cadence to what was actually logged. */
+export interface WeeklyComplianceReport {
+  dutyScopeId: string;
+  prospectId: string;
+  /** Start-of-week timestamp (Monday 00:00, in the caller's timezone) this report covers. */
+  weekStart: number;
+  expectedVisits: number;
+  actualVisits: number;
+  compliant: boolean;
+  deficit: number;
+}
+
+/**
+ * Social platforms the content studio can target. Only platforms that
+ * expose an official content-publishing API for owned business/creator
+ * accounts are supported for automated publishing; Snapchat has no public
+ * API for organic content and is always routed to the manual-fallback
+ * queue (see `SocialPublisher`).
+ */
+export type ContentPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'snapchat';
+
+export type ContentAccountKind = 'personal' | 'company';
+
+/** The kind of content asset a plan item represents. */
+export type ContentType = 'post' | 'carousel' | 'single-banner' | 'video' | 'audio' | 'text';
+
+/** A brief describing what an account/topic's content plan should look like. */
+export interface ContentBrief {
+  id: string;
+  platform: ContentPlatform;
+  accountKind: ContentAccountKind;
+  /** Topic/industry the content should cover, e.g. "salon services in Dubai". */
+  topic: string;
+  /** Optional reference account/style to draw inspiration from (style only, not copied verbatim). */
+  referenceStyle?: string;
+  /** Optional trend keywords supplied by the requester or pulled from `TrendResearchRegistry`. */
+  trendKeywords: string[];
+  bio: string;
+  description: string;
+  createdAt: number;
+}
+
+/** A single recorded trend note used to steer content generation. */
+export interface TrendNote {
+  id: string;
+  platform: ContentPlatform;
+  keyword: string;
+  source: string;
+  recordedAt: number;
+}
+
+export type ContentItemStatus = 'draft' | 'published' | 'publish-failed' | 'manual-fallback';
+
+/** One publish destination for a content item (a social platform, or the company website). */
+export interface ContentDestination {
+  channel: ContentPlatform | 'website';
+  status: ContentItemStatus;
+  failureReason?: string;
+  publishedAt?: number;
+}
+
+/** A single item in a generated content plan (one of the default 9 posts, a banner, a video, etc.). */
+export interface ContentItem {
+  id: string;
+  briefId: string;
+  index: number;
+  type: ContentType;
+  caption: string;
+  /** Human-readable brief for the asset itself (what the video/audio/banner should show), not the real media file. */
+  mediaBrief: string;
+  destinations: ContentDestination[];
+  createdAt: number;
+}
+
+export type InstagramAdObjective = 'traffic' | 'leads' | 'messages' | 'awareness';
+
+export type InstagramAdStatus = 'draft' | 'submitted' | 'manual-fallback';
+
+export type InstagramAdCallToAction =
+  | 'LEARN_MORE'
+  | 'SIGN_UP'
+  | 'CONTACT_US'
+  | 'BOOK_TRAVEL'
+  | 'GET_OFFER'
+  | 'SEND_MESSAGE';
+
+/**
+ * A compliant Instagram company-ad request for an account the business already owns.
+ * Submission is handled only through Meta Marketing API credentials; otherwise it is
+ * kept in a manual-fallback queue for a human to launch in Meta Ads Manager.
+ */
+export interface InstagramCompanyAd {
+  id: string;
+  companyName: string;
+  instagramHandle?: string;
+  objective: InstagramAdObjective;
+  caption: string;
+  mediaUrl: string;
+  landingUrl: string;
+  dailyBudgetMinor: number;
+  currency: string;
+  targetLocations: string[];
+  targetInterests: string[];
+  callToAction: InstagramAdCallToAction;
+  status: InstagramAdStatus;
+  complianceNotes: string[];
+  createdAt: number;
+  submittedAt?: number;
+  failureReason?: string;
+  metaCampaignId?: string;
+  metaAdSetId?: string;
+  metaCreativeId?: string;
+  metaAdId?: string;
+}
+
+/**
+ * Instagram Legal Growth Engine.
+ *
+ * Models a consent-first Instagram account funnel: account discovery, public
+ * signal/contact source ledger, legal eligibility checks, warm-up triggers,
+ * permission-first messaging, opt-in conversion, and a strictly manual seller
+ * handoff queue for accounts the automated/legal paths cannot continue.
+ */
+
+export type InstagramGrowthAccountType = 'unknown' | 'personal' | 'business' | 'creator' | 'influencer' | 'company';
+
+export type InstagramGrowthStage =
+  | 'found'
+  | 'classified'
+  | 'public-signal-collected'
+  | 'contact-enriched'
+  | 'warmup-needed'
+  | 'ad-retargeting'
+  | 'comment-triggered'
+  | 'story-replied'
+  | 'dm-keyword-received'
+  | 'mention-triggered'
+  | 'permission-message-ready'
+  | 'permission-message-sent'
+  | 'replied'
+  | 'consented'
+  | 'converted-contact'
+  | 'booking-ready'
+  | 'human-handoff-needed'
+  | 'seller-contacted'
+  | 'seller-success'
+  | 'seller-no-response'
+  | 'archived'
+  | 'opted-out'
+  | 'blocked';
+
+export type InstagramContactKind = 'email' | 'phone' | 'whatsapp' | 'website' | 'form' | 'other-social';
+
+export type InstagramContactSource =
+  | 'instagram_bio_public_contact'
+  | 'contact_button'
+  | 'website_public_contact'
+  | 'landing_form'
+  | 'inbound_dm'
+  | 'crm_consented'
+  | 'meta_lead_form'
+  | 'linked_public_channel'
+  | 'manual_public_note';
+
+export type InstagramWarmupPath =
+  | 'retargeting_ad'
+  | 'click_to_dm_ad'
+  | 'comment_keyword'
+  | 'story_reply'
+  | 'dm_keyword'
+  | 'mention_trigger'
+  | 'lead_form'
+  | 'bio_link'
+  | 'customer_list_lookalike'
+  | 'influencer_funnel'
+  | 'referral_link'
+  | 'ugc_challenge'
+  | 'crm_reactivation';
+
+export type InstagramEligibilityStatus = 'allowed' | 'blocked' | 'needs-review';
+
+export type InstagramConsentState = 'none' | 'pending' | 'granted' | 'declined' | 'opted-out';
+
+export type SellerHandoffMethod =
+  | 'seller-instagram-personal'
+  | 'seller-instagram-company'
+  | 'phone'
+  | 'whatsapp'
+  | 'email';
+
+export type SellerHandoffStatus = 'queued' | 'contacted' | 'success' | 'no-response' | 'opted-out' | 'blocked';
+
+export interface InstagramPublicContact {
+  kind: InstagramContactKind;
+  value: string;
+  source: InstagramContactSource;
+  proof: string;
+  publicBusinessContact: boolean;
+  capturedAt: number;
+}
+
+export interface InstagramPublicSignals {
+  bio?: string;
+  category?: string;
+  website?: string;
+  linkedSocials?: string[];
+  notes?: string[];
+}
+
+export interface InstagramConsentRecord {
+  state: InstagramConsentState;
+  source: 'reply' | 'form' | 'lead_ad' | 'crm' | 'opt_out' | 'manual';
+  proof: string;
+  recordedAt: number;
+}
+
+export interface InstagramEligibilityDecision {
+  status: InstagramEligibilityStatus;
+  reason: string;
+  allowedMethods: string[];
+  sourceProof?: string;
+}
+
+export interface InstagramSellerHandoff {
+  id: string;
+  accountId: string;
+  assignedSeller: string;
+  allowedMethod: SellerHandoffMethod;
+  reason: string;
+  script: string;
+  maxAttempts: number;
+  attempts: number;
+  deadlineAt: number;
+  status: SellerHandoffStatus;
+  manualOnly: boolean;
+  noAutomation: boolean;
+  sellerAccountVerified: boolean;
+  createdAt: number;
+  lastOutcome?: string;
+}
+
+export interface InstagramSellerAction {
+  handoffId: string;
+  accountId: string;
+  seller: string;
+  method: SellerHandoffMethod;
+  outcome: 'contacted' | 'success' | 'no-response' | 'opt-out';
+  note: string;
+  recordedAt: number;
+}
+
+export interface InstagramGrowthEvent {
+  stage: InstagramGrowthStage;
+  note: string;
+  actor: string;
+  timestamp: number;
+}
+
+export interface InstagramGrowthAccount {
+  id: string;
+  handle: string;
+  displayName?: string;
+  accountType: InstagramGrowthAccountType;
+  stage: InstagramGrowthStage;
+  source: string;
+  matchScore?: number;
+  signals: InstagramPublicSignals;
+  contacts: InstagramPublicContact[];
+  consent: InstagramConsentRecord[];
+  warmupPaths: InstagramWarmupPath[];
+  eligibility: InstagramEligibilityDecision;
+  sellerHandoff?: InstagramSellerHandoff;
+  archiveReason?: string;
+  createdAt: number;
+  updatedAt: number;
+  events: InstagramGrowthEvent[];
+}
+
+export interface InstagramFunnelMetrics {
+  totalFound: number;
+  classified: number;
+  publicSignalsFound: number;
+  publicContactFound: number;
+  eligible: number;
+  engaged: number;
+  permissionSent: number;
+  consented: number;
+  converted: number;
+  booked: number;
+  archived: number;
+  sellerHandoff: number;
+  optedOut: number;
+  blocked: number;
+}

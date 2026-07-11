@@ -1,0 +1,19 @@
+{
+  "name": "music-studio-game",
+  "version": "0.1.0",
+  "description": "A standalone, viral-ready kids' music studio (age 6-9 baseline) with home and classroom modes: pick a song, build it with guided tools solo or in a group, record your part, mix it, and auto-generate a shareable recap video.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "tsc --noEmit -p tsconfig.json"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.9",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.5",
+    "typescript": "^5.5.3"
+  }
+}

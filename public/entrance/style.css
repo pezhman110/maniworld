@@ -1,0 +1,181 @@
+:root {
+  --border: #d9d9e3;
+  --bg: #f7f7fb;
+  --accent: #2f5bea;
+  --accent-dark: #1d3fb0;
+  --text: #1c1c28;
+  --muted: #6b6b7b;
+  --success: #157a3f;
+  --danger: #a3231f;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 255, 255, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 80%, rgba(255, 255, 255, 0.08), transparent 45%),
+    linear-gradient(135deg, var(--accent), var(--accent-dark) 65%, #12246e);
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.entrance-card {
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(10, 20, 60, 0.35);
+  padding: 40px 36px 32px;
+  animation: rise 0.5s ease-out;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.brand-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  box-shadow: 0 10px 24px rgba(47, 91, 234, 0.35);
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.brand p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.lang-toggle {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 24px;
+}
+
+.lang-toggle button {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.lang-toggle button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+form label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--text);
+}
+
+form .field {
+  margin-bottom: 18px;
+}
+
+form input[type="password"],
+form input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 0.95rem;
+  background: #fbfbfe;
+}
+
+form input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(47, 91, 234, 0.15);
+}
+
+.enter-btn {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  box-shadow: 0 12px 24px rgba(47, 91, 234, 0.3);
+}
+
+.enter-btn:hover { transform: translateY(-1px); }
+.enter-btn:active { transform: translateY(0); }
+
+.status-msg {
+  margin-top: 14px;
+  font-size: 0.85rem;
+  text-align: center;
+  min-height: 18px;
+}
+
+.status-msg.error { color: var(--danger); }
+.status-msg.success { color: var(--success); }
+
+.footnote {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.footnote a { color: var(--accent-dark); text-decoration: none; font-weight: 600; }
+.footnote a:hover { text-decoration: underline; }
+
+[dir="rtl"] form label,
+[dir="rtl"] .status-msg,
+[dir="rtl"] .footnote,
+[dir="rtl"] .brand p {
+  text-align: right;
+}
+
+[dir="rtl"] .status-msg { text-align: center; }

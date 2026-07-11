@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mani World — Admin Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Mani World — Admin Dashboard</h1>
+    <div class="apikey-bar">
+      <label for="apiKey">Admin API key</label>
+      <input id="apiKey" type="password" placeholder="x-api-key (leave empty if server has none configured)" />
+      <button id="saveApiKey">Save</button>
+      <span id="apiKeyStatus"></span>
+      <label for="langSwitcher" class="lang-label" data-i18n="dashboard.language">Language</label>
+      <select id="langSwitcher">
+        <option value="en">English</option>
+        <option value="fa">فارسی</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-tab="project-setup">Project Setup</button>
+    <button class="tab-btn" data-tab="mission-control">Mission Control</button>
+    <button class="tab-btn" data-tab="pipeline">Pipeline Overview</button>
+    <button class="tab-btn" data-tab="connections">Connections</button>
+    <button class="tab-btn" data-tab="markets">Markets</button>
+    <button class="tab-btn" data-tab="presentation">Presentation Campaigns</button>
+    <button class="tab-btn" data-tab="outreach">Prospect Outreach</button>
+    <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
+    <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
+    <button class="tab-btn" data-tab="content-studio">Content Studio</button>
+    <button class="tab-btn" data-tab="globex-horizon">Globex Horizon</button>
+    <button class="tab-btn" data-tab="investor-acquisition">Investor Acquisition</button>
+    <button class="tab-btn" data-tab="instagram-growth">Instagram Growth</button>
+    <button class="tab-btn" data-tab="linkedin-growth">LinkedIn Growth</button>
+    <button class="tab-btn" data-tab="pages-websites" data-i18n="pages.nav">Pages &amp; Websites</button>
+  </nav>
+
+  <main>
+    <section id="tab-project-setup" class="tab active">
+      <h2>Project Setup — Step 0</h2>
+      <p class="hint">
+        This is where it all begins: an external client enters the project's information and gives it a
+        name (e.g. "Freelancer"). As soon as it is named, all three acquisition routes exist for it and can
+        be switched on independently: 1) search online/offline networks and contact people directly,
+        2) stand up a page on your site and run free campaigns, 3) pull resumes from connected
+        LinkedIn/Indeed accounts. You can also list the project's must/must-not goals and standards here,
+        and request an AI persona to host online sessions — which a manager must explicitly approve before
+        it is ever allowed to run a live call.
+      </p>
+
+      <h3>Step 0 — Name the project &amp; set its goals/standards</h3>
+      <div id="projectsList" class="cards"></div>
+      <form id="projectForm">
+        <label>Project id <input id="pjId" type="text" placeholder="e.g. freelancer" required /></label>
+        <label>Project name <input id="pjName" type="text" placeholder="e.g. Freelancer" required /></label>
+        <label>Entered by (you, the external client) <input id="pjCreatedBy" type="text" placeholder="your name" required /></label>
+        <label>Goals / must &amp; must-not standards (comma separated)
+          <textarea id="pjGoals" placeholder="e.g. must contact previous employer, must not exceed daily cap, must keep score >=80"></textarea>
+        </label>
+        <button type="submit">Create project</button>
+      </form>
+
+      <h3>The three routes for this project</h3>
+      <form id="projectRouteForm">
+        <label>Project id <input id="prProjectId" type="text" placeholder="same id as above" required /></label>
+        <label>Route
+          <select id="prRoute">
+            <option value="direct-network">1. Search online/offline networks &amp; contact directly</option>
+            <option value="job-posting">2. Build a page on your site + run free campaigns</option>
+            <option value="resume-intake">3. Pull &amp; screen resumes from LinkedIn/Indeed</option>
+          </select>
+        </label>
+        <button type="submit" data-mode="activate">Activate route</button>
+        <button type="submit" data-mode="deactivate">Deactivate route</button>
+      </form>
+
+      <h3>AI persona for online sessions (requires manager approval before use)</h3>
+      <p class="hint">
+        Once contact is made and the candidate confirms, an online meeting is booked. If that meeting is to
+        be hosted by an AI persona (chosen based on this project's goals), it must be requested here and
+        approved by a manager first — it can never be used in a live session while still pending.
+      </p>
+      <form id="aiPersonaForm">
+        <label>Project id <input id="apProjectId" type="text" placeholder="same id as above" required /></label>
+        <label>Persona name <input id="apName" type="text" placeholder="e.g. Banking Recruiter Bot" required /></label>
+        <label>Purpose (aligned with project goals) <textarea id="apPurpose" required></textarea></label>
+        <label>Instructions / script <textarea id="apInstructions" required></textarea></label>
+        <label>Requested by <input id="apRequestedBy" type="text" placeholder="your name" required /></label>
+        <button type="submit">Request AI persona</button>
+      </form>
+      <div id="aiPersonasList" class="cards"></div>
+
+      <h3>Pending manager approval</h3>
+      <div id="aiPersonaPendingList" class="cards"></div>
+    </section>
+
+    <section id="tab-mission-control" class="tab">
+      <h2>Mission Control — Growth Command Center</h2>
+      <p class="hint">
+        Goal of this module: find target accounts in a given topic/country/region, screen them,
+        reach out on the same platform, convert to phone/email, make direct contact, invite to an
+        online meeting and, once approved, continue the journey — or, on parallel tracks: create a
+        job posting + landing page, or receive and screen resumes from LinkedIn/Indeed. Every
+        target group (freelance beauty service providers, beauty/investment/business buy-sell
+        influencers, bank network, contacts close to the plan) has its own policy and route. Work
+        through the five steps below in order; each step operates directly on the system's real
+        data (Presentation Campaigns / Prospect Outreach).
+      </p>
+
+      <h3>Step 1 — Define target audience groups (goal, commission, route, regions, policy)</h3>
+      <div id="missionGroupsList" class="cards"></div>
+      <form id="missionGroupForm">
+        <label>Group id <input id="mgId" type="text" placeholder="e.g. freelancers-beauty" required /></label>
+        <label>Label <input id="mgLabel" type="text" placeholder="e.g. Freelance beauty service providers" required /></label>
+        <label>Target text <textarea id="mgTargetText" placeholder="Message/pitch shown to this group" required></textarea></label>
+        <label>Goals (comma separated) <input id="mgGoals" type="text" placeholder="sign-collab-agreement, book-call" required /></label>
+        <label>Route (Step 2)
+          <select id="mgRoute">
+            <option value="">— choose —</option>
+            <option value="direct-network">1. Direct network search &amp; outreach</option>
+            <option value="job-posting">2. Job posting + landing page</option>
+            <option value="resume-intake">3. Resume intake (LinkedIn/Indeed)</option>
+          </select>
+        </label>
+        <label>Regions (Step 4, comma separated) <input id="mgRegions" type="text" placeholder="e.g. Iran-Tehran, UAE-Dubai" /></label>
+        <label>Daily cap (Step 4, optional) <input id="mgDailyCap" type="number" min="0" placeholder="e.g. 50" /></label>
+        <label>Working hours start (Step 4) <input id="mgHoursStart" type="number" min="0" max="24" placeholder="9" /></label>
+        <label>Working hours end (Step 4) <input id="mgHoursEnd" type="number" min="0" max="24" placeholder="18" /></label>
+        <button type="submit">Save group</button>
+      </form>
+
+      <h3>Step 2 — What each route does</h3>
+      <div class="cards">
+        <div class="card">
+          <h4>1. Direct network search &amp; outreach</h4>
+          <div>Search a platform by topic/country/region → screen matches (score ≥80%) → contact inside the
+            platform → convert to email/phone → contact directly → invite to an online meeting → if approved,
+            move forward to contract.</div>
+        </div>
+        <div class="card">
+          <h4>2. Job posting + landing page</h4>
+          <div>Publish a job ad + a single-page site (your text or ours, hosted wherever you choose) → screen
+            applicants → contact → invite (address/name shown on the page) → same approval flow as above.</div>
+        </div>
+        <div class="card">
+          <h4>3. Resume intake (LinkedIn/Indeed)</h4>
+          <div>Pull submitted resumes from LinkedIn/Indeed/manual links → download &amp; read → screen → continue
+            exactly like route 2 from there.</div>
+        </div>
+      </div>
+
+      <h3>Step 3 — Steps for this group's route (add/remove message-script segments)</h3>
+      <form id="missionStepForm">
+        <label>Group id <input id="msGroupId" type="text" placeholder="same id as Step 1" required /></label>
+        <label>Base script (overwrite) <textarea id="msBase" placeholder="Base outreach script for this group"></textarea></label>
+        <label>Add a step / custom segment <textarea id="msCustom" placeholder="e.g. Step 3: send phone verification link"></textarea></label>
+        <button type="submit">Add step</button>
+      </form>
+      <div id="missionStepPreview" class="hint"></div>
+
+      <h3>Step 4 — Regions &amp; policy</h3>
+      <p class="hint">Set per-group in Step 1's form above: target regions, daily contact cap, and allowed working hours.</p>
+
+      <h3>Step 5 — Run &amp; see results</h3>
+      <p class="hint">Activating a group marks it live; open Pipeline Overview to watch prospects move through every step in real time.</p>
+      <div id="missionRunPanel" class="cards"></div>
+    </section>
+
+    <section id="tab-pipeline" class="tab">
+      <h2>Pipeline Overview — Step by Step</h2>
+      <p class="hint">
+        The full journey in one place: advertisement/landing page → resume intake (Indeed / LinkedIn /
+        manual / other) → account sourced &amp; qualified → contacted on their own platform → converted to
+        email/phone → contacted directly → online consultation → in-person screening → hand-off for
+        approval → contract sent → post-contract duty scope &amp; contract-term quotas (e.g. minimum active
+        clients or bank experts in the network).
+      </p>
+
+      <h3>Key numbers</h3>
+      <div id="pipelineKpis" class="kpi-grid"></div>
+
+      <h3>Funnel — every prospect, by step</h3>
+      <div id="pipelineFunnel" class="stepper"></div>
+
+      <h3>Track a single prospect</h3>
+      <form id="pipelineTrackForm">
+        <label>Prospect id <input id="pipelineProspectId" type="text" placeholder="e.g. prospect-1" required /></label>
+        <button type="submit">Show journey</button>
+      </form>
+      <div id="pipelineProspectStepper" class="stepper"></div>
+
+      <h3>Contract-term quotas currently short (needs follow-up)</h3>
+      <div id="pipelineQuotaAlerts" class="cards"></div>
+    </section>
+
+    <section id="tab-connections" class="tab">
+      <h2>Connections</h2>
+      <p class="hint">Wire up every outreach integration here. Secrets are encrypted at rest and never shown again after saving.</p>
+      <div id="connectionsList" class="cards"></div>
+
+      <h3>Add / update a connection</h3>
+      <form id="connectionForm">
+        <label>Provider
+          <select id="providerSelect"></select>
+        </label>
+        <label>Label
+          <input id="providerLabel" type="text" placeholder="e.g. Production Twilio" required />
+        </label>
+        <div id="fieldsContainer"></div>
+        <button type="submit">Save connection</button>
+      </form>
+    </section>
+
+    <section id="tab-markets" class="tab">
+      <h2>Markets</h2>
+      <p class="hint">The 5 built-in markets are read-only reference. Add a new market type below without any code change.</p>
+      <h3>Built-in markets</h3>
+      <div id="builtInMarkets" class="cards"></div>
+
+      <h3>Custom markets</h3>
+      <div id="customMarkets" class="cards"></div>
+
+      <h3>Add a custom market</h3>
+      <form id="marketForm">
+        <label>Market id <input id="marketId" type="text" placeholder="e.g. franchise-expansion" required /></label>
+        <label>Label <input id="marketLabel" type="text" placeholder="e.g. Franchise Expansion" required /></label>
+        <label>Start hour <input id="marketStartHour" type="number" min="0" max="24" value="9" required /></label>
+        <label>End hour <input id="marketEndHour" type="number" min="0" max="24" value="18" required /></label>
+        <label>Metric <input id="marketMetric" type="text" placeholder="e.g. online-session" required /></label>
+        <label>Min/day <input id="marketMin" type="number" min="0" value="10" required /></label>
+        <label>Max/day (optional) <input id="marketMax" type="number" min="0" /></label>
+        <button type="submit">Add market</button>
+      </form>
+    </section>
+    <section id="tab-presentation" class="tab">
+      <h2>Presentation Campaigns</h2>
+      <p class="hint">
+        One page for the whole "presentation session with online consultation" module: pick the
+        audience (its target text and goals change together — e.g. switch from influencer to
+        banking sector), set the commission/collaboration model for that audience, record how a
+        candidate's resume was sourced, and build the single-page site (slug/domain + manually
+        added words/sentences/addresses) that collects leads for it.
+      </p>
+
+      <h3>Audience profiles</h3>
+      <div id="audienceProfilesList" class="cards"></div>
+      <form id="audienceProfileForm">
+        <label>Id <input id="apId" type="text" placeholder="e.g. banking" required /></label>
+        <label>Label <input id="apLabel" type="text" placeholder="e.g. Banking sector" required /></label>
+        <label>Vertical (optional) <input id="apVertical" type="text" placeholder="e.g. banking" /></label>
+        <label>Target text <textarea id="apTargetText" placeholder="Message shown to this audience" required></textarea></label>
+        <label>Goals (comma separated) <input id="apGoals" type="text" placeholder="sign-corporate-contract, compliance-review" required /></label>
+        <button type="submit">Save audience profile</button>
+      </form>
+
+      <h3>Commission / collaboration models</h3>
+      <div id="commissionModelsList" class="cards"></div>
+      <form id="commissionModelForm">
+        <label>Id <input id="cmId" type="text" placeholder="e.g. banking-tiered" required /></label>
+        <label>Label <input id="cmLabel" type="text" placeholder="e.g. Banking tiered plan" required /></label>
+        <label>Type
+          <select id="cmType">
+            <option value="percentage">percentage</option>
+            <option value="flat">flat</option>
+            <option value="tiered">tiered</option>
+          </select>
+        </label>
+        <label>Rate (for percentage/flat) <input id="cmRate" type="number" min="0" step="0.01" /></label>
+        <label>Tiers (for tiered, e.g. "10:5, :8") <input id="cmTiers" type="text" placeholder="upToCount:rate, :rate" /></label>
+        <label>Audience profile id (optional) <input id="cmAudienceProfileId" type="text" placeholder="e.g. banking" /></label>
+        <button type="submit">Save commission model</button>
+      </form>
+
+      <h3>Resume intake (Indeed / LinkedIn / manual)</h3>
+      <div id="resumesList" class="cards"></div>
+      <form id="resumeForm">
+        <label>Candidate name <input id="resCandidateName" type="text" required /></label>
+        <label>Source
+          <select id="resSource">
+            <option value="indeed">indeed</option>
+            <option value="linkedin">linkedin</option>
+            <option value="manual-link">manual-link</option>
+            <option value="upload">upload</option>
+          </select>
+        </label>
+        <label>URL (for indeed/linkedin/manual-link) <input id="resUrl" type="text" placeholder="https://..." /></label>
+        <label>Audience profile id (optional) <input id="resAudienceProfileId" type="text" /></label>
+        <button type="submit">Save resume</button>
+      </form>
+
+      <h3>Landing pages (single-page sites)</h3>
+      <div id="landingPagesList" class="cards"></div>
+      <form id="landingPageForm">
+        <label>Id <input id="lpId" type="text" placeholder="e.g. bank-page" required /></label>
+        <label>Slug <input id="lpSlug" type="text" placeholder="e.g. bank-consult" required /></label>
+        <label>Custom domain (optional) <input id="lpDomain" type="text" placeholder="e.g. consult.example.com" /></label>
+        <label>Audience profile id (optional) <input id="lpAudienceProfileId" type="text" /></label>
+        <label>Hero text <textarea id="lpHeroText" required></textarea></label>
+        <label>Content blocks (label:content per line — words/sentences/addresses)
+          <textarea id="lpContentBlocks" placeholder="address: Tehran, Valiasr St.&#10;phone: +98 21 0000 0000"></textarea>
+        </label>
+        <label>Lead form fields (comma separated) <input id="lpLeadFormFields" type="text" placeholder="fullName, phone, company" /></label>
+        <button type="submit">Save landing page</button>
+      </form>
+    </section>
+    <section id="tab-outreach" class="tab">
+      <h2>Prospect Outreach</h2>
+      <p class="hint">
+        Search a network for accounts matching a recruitment plan, score the match, and once it
+        crosses 80% work the prospect through: contact inside their own platform, convert the
+        account to an email/phone, contact directly, invite to an online consultation (combined
+        default + custom script), invite in person to the salon/office (controlled visiting
+        hours), hand the list to the responsible person, and send the contract once approved.
+      </p>
+
+      <h3>Outreach scripts (per audience profile / platform key)</h3>
+      <form id="outreachScriptForm">
+        <label>Key <input id="oScriptKey" type="text" placeholder="e.g. influencer" required /></label>
+        <label>Base script <textarea id="oScriptBase" placeholder="Your default script"></textarea></label>
+        <label>Add custom segment <textarea id="oScriptCustom" placeholder="Extra text to append"></textarea></label>
+        <button type="submit">Save script</button>
+      </form>
+      <div id="outreachScriptPreview" class="hint"></div>
+
+      <h3>Prospects</h3>
+      <div id="prospectsList" class="cards"></div>
+      <form id="prospectForm">
+        <label>Id (optional) <input id="pId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Plan id <input id="pPlanId" type="text" placeholder="e.g. plan-1" required /></label>
+        <label>Audience profile id (optional) <input id="pAudienceProfileId" type="text" /></label>
+        <label>Platform
+          <select id="pPlatform">
+            <option value="instagram">instagram</option>
+            <option value="linkedin">linkedin</option>
+            <option value="telegram">telegram</option>
+            <option value="x">x</option>
+            <option value="website">website</option>
+            <option value="bank-portal">bank-portal</option>
+            <option value="other">other</option>
+          </select>
+        </label>
+        <label>Account handle <input id="pAccountHandle" type="text" placeholder="e.g. @jane" required /></label>
+        <label>Display name (optional) <input id="pDisplayName" type="text" /></label>
+        <label>Match score (0-100) <input id="pMatchScore" type="number" min="0" max="100" required /></label>
+        <button type="submit">Add prospect</button>
+      </form>
+    </section>
+    <section id="tab-compliance-policy" class="tab">
+      <h2>Compliance Policy</h2>
+      <p class="hint">
+        Every acquisition route (direct network search, job posting/campaign, and resume intake)
+        runs in parallel, but each is gated by an explicit, admin-editable list of "must" and
+        "must-not" rules - set once, then re-confirmed (same or revised) at the start of every
+        later outreach cycle. Define a separate "interview-conduct" policy for how the person
+        running online/in-person sessions for a route must behave.
+      </p>
+
+      <h3>Define a policy</h3>
+      <form id="compliancePolicyForm">
+        <label>Id <input id="cpId" type="text" placeholder="e.g. policy-direct-network" required /></label>
+        <label>Scope
+          <select id="cpScope">
+            <option value="route">route</option>
+            <option value="interview-conduct">interview-conduct</option>
+          </select>
+        </label>
+        <label>Route
+          <select id="cpRoute">
+            <option value="direct-network">direct-network</option>
+            <option value="job-posting">job-posting</option>
+            <option value="resume-intake">resume-intake</option>
+          </select>
+        </label>
+        <label>Audience profile id (optional) <input id="cpAudienceProfileId" type="text" /></label>
+        <label>Rules (one per line, prefix with "must:" or "must-not:")
+          <textarea id="cpRules" placeholder="must:Use the candidate's own real account&#10;must-not:Create or purchase fake/synthetic accounts&#10;must:Contact the previous employer before an offer" required></textarea>
+        </label>
+        <button type="submit">Define policy</button>
+      </form>
+
+      <h3>Policies</h3>
+      <div id="compliancePoliciesList" class="cards"></div>
+    </section>
+    <section id="tab-duty-scope" class="tab">
+      <h2>Post-Contract Duty Scope</h2>
+      <p class="hint">
+        Once a prospect's contract has been sent (influencer, banking network, or any other channel), define the
+        concrete post-contract job description here (e.g. "2 visits/day"), tied to the salon services/commission
+        they're compensated for. Log actual visits as check-ins, and monitor weekly compliance against the agreed
+        cadence.
+      </p>
+
+      <h3>Define a duty scope</h3>
+      <form id="dutyScopeForm">
+        <label>Id (optional) <input id="dsId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Prospect id <input id="dsProspectId" type="text" placeholder="e.g. prospect-1" required /></label>
+        <label>Location id (optional) <input id="dsLocationId" type="text" placeholder="e.g. salon-1" /></label>
+        <label>Visits per period <input id="dsVisitsPerPeriod" type="number" min="1" value="2" required /></label>
+        <label>Period
+          <select id="dsPeriod">
+            <option value="day">day</option>
+            <option value="week">week</option>
+          </select>
+        </label>
+        <label>Services covered (comma separated) <input id="dsServicesCovered" type="text" placeholder="manicure, hair" /></label>
+        <label>Commission % (optional) <input id="dsCommissionPercent" type="number" min="0" max="100" /></label>
+        <label>Contract-term quotas (metric:minCount per line, e.g. "active-clients:40")
+          <textarea id="dsQuotas" placeholder="active-clients:40&#10;bank-experts-in-network:30"></textarea>
+        </label>
+        <button type="submit">Define duty scope</button>
+      </form>
+
+      <h3>Duty scopes</h3>
+      <div id="dutyScopesList" class="cards"></div>
+
+      <h3>Record a contract-term quota reading</h3>
+      <p class="hint">E.g. "42 active clients" or "31 bank experts in the network" — checked against the minimum agreed for that duty scope.</p>
+      <form id="dutyQuotaReadingForm">
+        <label>Duty scope id <input id="dqrDutyScopeId" type="text" placeholder="e.g. duty_1" required /></label>
+        <label>Metric <input id="dqrMetric" type="text" placeholder="e.g. active-clients" required /></label>
+        <label>Count <input id="dqrCount" type="number" min="0" required /></label>
+        <button type="submit">Record reading</button>
+      </form>
+      <div id="dutyQuotaStatusList" class="cards"></div>
+
+      <h3>Weekly compliance monitoring</h3>
+      <form id="dutyComplianceForm">
+        <label>Week start (Monday) <input id="dsWeekStart" type="date" required /></label>
+        <label><input id="dsNonCompliantOnly" type="checkbox" /> Non-compliant only</label>
+        <button type="submit">Check compliance</button>
+      </form>
+      <div id="dutyComplianceList" class="cards"></div>
+    </section>
+
+    <section id="tab-content-studio" class="tab">
+      <h2>Content Studio</h2>
+      <p class="hint">
+        Bio/description generation, a plan of content (default 9 posts, cycling through
+        post/carousel/single-banner/video/audio/text), and per-item publishing — for accounts you already own and
+        have created legitimately. Publishing uses each platform's official API; when a connection can't be
+        reached (missing credentials, an API failure, or a platform like Snapchat with no public content API),
+        the item is routed to the manual-fallback queue below instead of failing silently.
+      </p>
+
+      <h3>Record a trend note</h3>
+      <form id="trendForm">
+        <label>Platform
+          <select id="trendPlatform">
+            <option value="instagram">instagram</option>
+            <option value="tiktok">tiktok</option>
+            <option value="linkedin">linkedin</option>
+            <option value="facebook">facebook</option>
+            <option value="snapchat">snapchat</option>
+          </select>
+        </label>
+        <label>Keyword/trend <input id="trendKeyword" type="text" placeholder="e.g. glass skin" required /></label>
+        <label>Source <input id="trendSource" type="text" placeholder="e.g. Instagram Explore" required /></label>
+        <button type="submit">Record trend</button>
+      </form>
+      <div id="trendsList" class="cards"></div>
+
+      <h3>Create a content brief</h3>
+      <form id="contentBriefForm">
+        <label>Id (optional) <input id="cbId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Platform
+          <select id="cbPlatform">
+            <option value="instagram">instagram</option>
+            <option value="tiktok">tiktok</option>
+            <option value="linkedin">linkedin</option>
+            <option value="facebook">facebook</option>
+            <option value="snapchat">snapchat</option>
+          </select>
+        </label>
+        <label>Account type
+          <select id="cbAccountKind">
+            <option value="company">company</option>
+            <option value="personal">personal</option>
+          </select>
+        </label>
+        <label>Topic <input id="cbTopic" type="text" placeholder="e.g. salon services in Dubai" required /></label>
+        <label>Reference style (optional) <input id="cbReferenceStyle" type="text" placeholder="a page/style to draw inspiration from" /></label>
+        <label>Trend keywords (comma separated, optional) <input id="cbTrendKeywords" type="text" /></label>
+        <button type="submit">Create brief</button>
+      </form>
+
+      <h3>Briefs</h3>
+      <div id="contentBriefsList" class="cards"></div>
+
+      <h3>Generate a content plan</h3>
+      <form id="contentPlanForm">
+        <label>Brief id <input id="cpBriefId" type="text" placeholder="e.g. brief-1" required /></label>
+        <label># of items <input id="cpCount" type="number" min="1" value="9" required /></label>
+        <button type="submit">Generate plan</button>
+      </form>
+      <div id="contentItemsList" class="cards"></div>
+
+      <h3>Instagram company ads</h3>
+      <p class="hint">
+        Create a compliant ad request for an Instagram account your company owns. If Instagram credentials include
+        accessToken, adAccountId, pageId and instagramActorId, the app creates the ad in Meta Ads Manager as
+        <strong>PAUSED</strong> for final human review; otherwise it goes to manual fallback.
+      </p>
+      <form id="instagramAdForm">
+        <label>Id (optional) <input id="iaId" type="text" placeholder="auto-generated if left blank" /></label>
+        <label>Company name <input id="iaCompanyName" type="text" placeholder="Mani World" required /></label>
+        <label>Instagram handle <input id="iaHandle" type="text" placeholder="@yourcompany" /></label>
+        <label>Objective
+          <select id="iaObjective">
+            <option value="traffic">traffic</option>
+            <option value="leads">leads</option>
+            <option value="messages">messages</option>
+            <option value="awareness">awareness</option>
+          </select>
+        </label>
+        <label>Caption <input id="iaCaption" type="text" placeholder="Company offer / promotion text" required /></label>
+        <label>Public media URL <input id="iaMediaUrl" type="url" placeholder="https://example.com/ad-image.jpg" required /></label>
+        <label>Landing URL <input id="iaLandingUrl" type="url" placeholder="https://example.com/landing" required /></label>
+        <label>Daily budget (minor units) <input id="iaBudget" type="number" min="1" value="5000" required /></label>
+        <label>Currency <input id="iaCurrency" type="text" maxlength="3" value="AED" required /></label>
+        <label>Target country codes <input id="iaLocations" type="text" placeholder="AE, IR" /></label>
+        <label>Target interests <input id="iaInterests" type="text" placeholder="beauty, business, investment" /></label>
+        <label>Call to action
+          <select id="iaCta">
+            <option value="LEARN_MORE">LEARN_MORE</option>
+            <option value="SIGN_UP">SIGN_UP</option>
+            <option value="CONTACT_US">CONTACT_US</option>
+            <option value="BOOK_TRAVEL">BOOK_TRAVEL</option>
+            <option value="GET_OFFER">GET_OFFER</option>
+            <option value="SEND_MESSAGE">SEND_MESSAGE</option>
+          </select>
+        </label>
+        <button type="submit">Create Instagram ad</button>
+      </form>
+      <div id="instagramAdsList" class="cards"></div>
+
+      <h3>Manual-fallback queue (couldn't connect / no public API — post these by hand)</h3>
+      <div id="contentFallbackQueue" class="cards"></div>
+      <h3>Instagram ads manual-fallback queue</h3>
+      <div id="instagramAdsFallbackQueue" class="cards"></div>
+    </section>
+
+    <section id="tab-investor-acquisition" class="tab">
+      <h2>Investor Acquisition — Stage 1 of 5</h2>
+      <p class="hint">
+        Backend-executable engine for the first 20 advanced investor targeting/acquisition tools. Unsafe requests
+        from the original list (fake accounts, anti-detection, scraped/purchased contacts, private monitoring, and
+        face recognition matching) are not implemented; the system converts them into compliant, official-API,
+        consent-first alternatives with source proof, opt-out and audit-ready outputs.
+      </p>
+
+      <h3>Operational metrics</h3>
+      <div id="investorMetrics" class="kpi-grid"></div>
+
+      <h3>20 tools: what is actually executable now</h3>
+      <div id="investorToolsList" class="cards"></div>
+
+      <h3>Evaluate a signal before outreach</h3>
+      <form id="investorEvaluateForm">
+        <label>Source
+          <select id="invSource">
+            <option value="inbound_form">inbound_form</option>
+            <option value="owned_crm">owned_crm</option>
+            <option value="lead_gen_form">lead_gen_form</option>
+            <option value="public_business_profile">public_business_profile</option>
+            <option value="consented_event_scan">consented_event_scan</option>
+            <option value="website_consent_pixel">website_consent_pixel</option>
+            <option value="manual_event_badge_scan">manual_event_badge_scan</option>
+            <option value="private_group">private_group (blocked)</option>
+            <option value="scraped_contact">scraped_contact (blocked)</option>
+            <option value="purchased_list">purchased_list (blocked)</option>
+            <option value="fake_account">fake_account (blocked)</option>
+            <option value="anti_detection">anti_detection (blocked)</option>
+            <option value="face_recognition">face_recognition (blocked)</option>
+          </select>
+        </label>
+        <label>Source proof <input id="invSourceProof" type="text" placeholder="form id / public business page / event opt-in proof" required /></label>
+        <label>Lead name <input id="invFullName" type="text" placeholder="optional" /></label>
+        <label>Company <input id="invCompany" type="text" placeholder="optional" /></label>
+        <label>Message / signal text <textarea id="invMessage" placeholder="e.g. میخوام سرمایهگذاری کنم با سود مطمئن"></textarea></label>
+        <label>Declared interests <input id="invInterests" type="text" placeholder="investment, franchise, passive income" /></label>
+        <label>Channels <input id="invChannels" type="text" placeholder="whatsapp,email,linkedin" /></label>
+        <label>Investor amount <input id="invAmount" type="number" min="0" /></label>
+        <label><input id="invConsent" type="checkbox" /> explicit opt-in / lead-form consent</label>
+        <label><input id="invPublicBusiness" type="checkbox" /> proven public business contact</label>
+        <button type="submit" data-action="evaluate">Evaluate only</button>
+        <button type="submit" data-action="register">Register lead</button>
+      </form>
+      <div id="investorEvaluationResult" class="cards"></div>
+
+      <h3>Registered investor leads</h3>
+      <div id="investorLeadsList" class="cards"></div>
+
+      <h3>Create runnable playbook from all 20 tools</h3>
+      <form id="investorPlaybookForm">
+        <label>Playbook name <input id="invPlaybookName" type="text" value="Stage 1 investor acquisition" required /></label>
+        <label>Objective <input id="invPlaybookObjective" type="text" value="Identify, score and route qualified investors legally" required /></label>
+        <label>Region <input id="invPlaybookRegion" type="text" placeholder="AE / IR / GCC" /></label>
+        <label>Channels <input id="invPlaybookChannels" type="text" value="website,email,whatsapp,linkedin" /></label>
+        <button type="submit">Create playbook</button>
+      </form>
+      <div id="investorPlaybooksList" class="cards"></div>
+    </section>
+
+    <section id="tab-globex-horizon" class="tab">
+      <h2>Globex Horizon — Industrial Sales Command Center</h2>
+      <p class="hint">
+        Executable mission pack for the 1,000,000 AED/month Globex Horizon sales system: 6 groups, 37 targets,
+        revenue model, team workflow, daily KPI tracking, and a compliance gate that replaces scraping/fake-account
+        tactics with official APIs, lead forms, referrals, public business contacts, and logged human follow-up.
+      </p>
+
+      <h3>Revenue & readiness</h3>
+      <div id="globexMetrics" class="kpi-grid"></div>
+      <div id="globexRevenueLines" class="cards"></div>
+
+      <h3>6 groups / 37 targets</h3>
+      <div id="globexGroups" class="cards"></div>
+
+      <h3>Compliance source check</h3>
+      <form id="globexSourceForm">
+        <label>Discovery source or tactic <input id="gxSource" type="text" placeholder="e.g. official Meta lead form / Instagram scraping" required /></label>
+        <button type="submit">Evaluate source</button>
+      </form>
+      <div id="globexSourceResult" class="cards"></div>
+
+      <h3>Daily operations report</h3>
+      <form id="globexReportForm">
+        <label>Date <input id="gxDate" type="date" required /></label>
+        <label>Discovered leads <input id="gxDiscoveredLeads" type="number" min="0" value="700" required /></label>
+        <label>AI-qualified leads <input id="gxAiQualifiedLeads" type="number" min="0" value="300" required /></label>
+        <label>Salon bookings <input id="gxSalonBookings" type="number" min="0" value="120" required /></label>
+        <label>Successful calls <input id="gxSuccessfulCalls" type="number" min="0" value="200" required /></label>
+        <label>Bridal contracts <input id="gxBridalContracts" type="number" min="0" value="5" required /></label>
+        <label>Freelancer interviews <input id="gxFreelancerInterviews" type="number" min="0" value="30" required /></label>
+        <label>Investor meetings <input id="gxInvestorMeetings" type="number" min="0" value="1" required /></label>
+        <label>Revenue AED <input id="gxRevenueAed" type="number" min="0" value="33334" required /></label>
+        <label>Avg response minutes <input id="gxAverageResponseMinutes" type="number" min="0" step="0.1" value="5" required /></label>
+        <label>Customer satisfaction <input id="gxCustomerSatisfaction" type="number" min="0" max="5" step="0.1" value="4.8" required /></label>
+        <label>Notes <textarea id="gxNotes" placeholder="Daily blockers / wins"></textarea></label>
+        <button type="submit">Save report</button>
+      </form>
+      <div id="globexReports" class="cards"></div>
+
+      <h3>Team workflow & ZIP deployment manifest</h3>
+      <div id="globexWorkflow" class="cards"></div>
+      <div id="globexDeployment" class="cards"></div>
+    </section>
+
+    <section id="tab-instagram-growth" class="tab">
+      <h2>Instagram Growth — Legal Contact Funnel</h2>
+      <p class="hint">
+        Consent-first Instagram account funnel: collect only public signals and sourced contact points, warm up with
+        compliant paths, send permission-first messages only after eligibility, and hand off unresolved accounts to
+        sellers as manual, limited, logged tasks — never as a way around consent.
+      </p>
+
+      <h3>Funnel Summary</h3>
+      <div id="instagramGrowthMetrics" class="kpi-grid"></div>
+
+      <h3>Add account</h3>
+      <form id="instagramGrowthAccountForm">
+        <label>Handle <input id="igHandle" type="text" placeholder="@target" required /></label>
+        <label>Display name <input id="igDisplayName" type="text" /></label>
+        <label>Source <input id="igSource" type="text" placeholder="manual search / official API export" required /></label>
+        <label>Type
+          <select id="igAccountType">
+            <option value="unknown">unknown</option>
+            <option value="personal">personal</option>
+            <option value="business">business</option>
+            <option value="creator">creator</option>
+            <option value="influencer">influencer</option>
+            <option value="company">company</option>
+          </select>
+        </label>
+        <label>Match score <input id="igMatchScore" type="number" min="0" max="100" /></label>
+        <button type="submit">Add account</button>
+      </form>
+
+      <h3>Public signal / contact capture</h3>
+      <form id="instagramGrowthSignalForm">
+        <label>Account id <input id="igsAccountId" type="text" required /></label>
+        <label>Bio <input id="igsBio" type="text" /></label>
+        <label>Category <input id="igsCategory" type="text" /></label>
+        <label>Website <input id="igsWebsite" type="url" /></label>
+        <button type="submit">Save signals</button>
+      </form>
+      <form id="instagramGrowthContactForm">
+        <label>Account id <input id="igcAccountId" type="text" required /></label>
+        <label>Kind
+          <select id="igcKind">
+            <option value="phone">phone</option>
+            <option value="whatsapp">whatsapp</option>
+            <option value="email">email</option>
+            <option value="website">website</option>
+            <option value="form">form</option>
+            <option value="other-social">other-social</option>
+          </select>
+        </label>
+        <label>Value <input id="igcValue" type="text" required /></label>
+        <label>Source
+          <select id="igcSource">
+            <option value="instagram_bio_public_contact">instagram_bio_public_contact</option>
+            <option value="contact_button">contact_button</option>
+            <option value="website_public_contact">website_public_contact</option>
+            <option value="landing_form">landing_form</option>
+            <option value="inbound_dm">inbound_dm</option>
+            <option value="crm_consented">crm_consented</option>
+            <option value="meta_lead_form">meta_lead_form</option>
+            <option value="linked_public_channel">linked_public_channel</option>
+            <option value="manual_public_note">manual_public_note</option>
+          </select>
+        </label>
+        <label>Proof <input id="igcProof" type="text" placeholder="bio snapshot / form id / CRM consent note" required /></label>
+        <label><input id="igcPublicBusiness" type="checkbox" /> public business contact</label>
+        <button type="submit">Add contact</button>
+      </form>
+
+      <h3>Warm-up, permission, consent</h3>
+      <form id="instagramGrowthActionForm">
+        <label>Account id <input id="igaAccountId" type="text" required /></label>
+        <label>Warm-up path
+          <select id="igaWarmupPath">
+            <option value="retargeting_ad">retargeting_ad</option>
+            <option value="click_to_dm_ad">click_to_dm_ad</option>
+            <option value="comment_keyword">comment_keyword</option>
+            <option value="story_reply">story_reply</option>
+            <option value="dm_keyword">dm_keyword</option>
+            <option value="mention_trigger">mention_trigger</option>
+            <option value="lead_form">lead_form</option>
+            <option value="bio_link">bio_link</option>
+            <option value="customer_list_lookalike">customer_list_lookalike</option>
+            <option value="influencer_funnel">influencer_funnel</option>
+            <option value="referral_link">referral_link</option>
+            <option value="ugc_challenge">ugc_challenge</option>
+            <option value="crm_reactivation">crm_reactivation</option>
+          </select>
+        </label>
+        <label>Permission script <input id="igaScript" type="text" value="Hi, may we send you details and continue this conversation?" /></label>
+        <label>Proof / reason <input id="igaProof" type="text" placeholder="reply text / archive reason / opt-out proof" /></label>
+        <button type="submit" data-action="warmup">Record warm-up</button>
+        <button type="submit" data-action="prepare">Prepare permission</button>
+        <button type="submit" data-action="send">Send permission</button>
+        <button type="submit" data-action="consent">Record opt-in</button>
+        <button type="submit" data-action="convert">Convert contact</button>
+        <button type="submit" data-action="booking">Booking ready</button>
+        <button type="submit" data-action="archive">Archive</button>
+        <button type="submit" data-action="optout">Opt-out</button>
+      </form>
+
+      <h3>Human Seller Handoff Queue</h3>
+      <form id="instagramGrowthHandoffForm">
+        <label>Account id <input id="ighAccountId" type="text" required /></label>
+        <label>Seller <input id="ighSeller" type="text" placeholder="seller name" required /></label>
+        <label>Method
+          <select id="ighMethod">
+            <option value="seller-instagram-company">seller-instagram-company</option>
+            <option value="seller-instagram-personal">seller-instagram-personal</option>
+            <option value="phone">phone</option>
+            <option value="whatsapp">whatsapp</option>
+            <option value="email">email</option>
+          </select>
+        </label>
+        <label>Reason <input id="ighReason" type="text" placeholder="no automated legal path; manual review" required /></label>
+        <label>Permission-first script <input id="ighScript" type="text" required /></label>
+        <label>Max attempts <input id="ighMaxAttempts" type="number" min="1" value="1" required /></label>
+        <label>Deadline <input id="ighDeadline" type="date" required /></label>
+        <button type="submit">Queue seller handoff</button>
+      </form>
+      <form id="instagramGrowthSellerActionForm">
+        <label>Account id <input id="ighaAccountId" type="text" required /></label>
+        <label>Outcome
+          <select id="ighaOutcome">
+            <option value="contacted">contacted</option>
+            <option value="success">success</option>
+            <option value="no-response">no-response</option>
+            <option value="opt-out">opt-out</option>
+          </select>
+        </label>
+        <label>Note <input id="ighaNote" type="text" required /></label>
+        <button type="submit">Record seller action</button>
+      </form>
+      <div id="instagramGrowthHandoffs" class="cards"></div>
+
+      <h3>Accounts, Legal Gate, Archive / Stop</h3>
+      <div id="instagramGrowthAccounts" class="cards"></div>
+      <div id="instagramGrowthArchive" class="cards"></div>
+    </section>
+
+    <section id="tab-linkedin-growth" class="tab">
+      <h2>LinkedIn Legal Growth, Contact &amp; Seller Handoff Engine</h2>
+      <p class="hint">
+        Consent-first LinkedIn module for personal and company leads: profile/company discovery, legal contact
+        paths, Lead Gen Forms, matched audiences/ABM, scoring, seller assignment, Seller Brief Cards, and the
+        technical connector/legal gate page. No scraping, guessed emails, fake accounts, bulk spam, or unauthorized messaging.
+      </p>
+
+      <h3>Funnel Summary</h3>
+      <div id="linkedinGrowthMetrics" class="kpi-grid"></div>
+
+      <h3>Add LinkedIn person / company lead</h3>
+      <form id="linkedinLeadForm">
+        <label>Name <input id="liName" type="text" required /></label>
+        <label>Scope
+          <select id="liScope">
+            <option value="personal">personal</option>
+            <option value="company">company</option>
+          </select>
+        </label>
+        <label>Lead type
+          <select id="liLeadType">
+            <option value="unknown">unknown</option>
+            <option value="investor">investor</option>
+            <option value="buyer">buyer</option>
+            <option value="seller">seller</option>
+            <option value="partner">partner</option>
+            <option value="freelancer">freelancer</option>
+            <option value="influencer">influencer</option>
+            <option value="candidate">candidate</option>
+            <option value="executive">executive</option>
+            <option value="decision-maker">decision-maker</option>
+            <option value="hotel">hotel</option>
+            <option value="salon-group">salon-group</option>
+            <option value="vendor">vendor</option>
+            <option value="supplier">supplier</option>
+          </select>
+        </label>
+        <label>Source <input id="liSource" type="text" placeholder="Sales Navigator / Lead Gen Form / company page" required /></label>
+        <label>Profile URL <input id="liProfileUrl" type="url" /></label>
+        <label>Company URL <input id="liCompanyUrl" type="url" /></label>
+        <label>Company <input id="liCompanyName" type="text" /></label>
+        <label>Industry <input id="liIndustry" type="text" /></label>
+        <label>Campaign <input id="liCampaign" type="text" /></label>
+        <label>Score <input id="liScore" type="number" min="0" max="100" value="75" /></label>
+        <button type="submit">Add LinkedIn lead</button>
+      </form>
+
+      <h3>Legal path / Lead Gen Form / seller assignment</h3>
+      <form id="linkedinActionForm">
+        <label>Lead id <input id="liaLeadId" type="text" required /></label>
+        <label>Path
+          <select id="liaPath">
+            <option value="connection-request">connection-request</option>
+            <option value="sales-navigator-inmail">sales-navigator-inmail</option>
+            <option value="accepted-connection-message">accepted-connection-message</option>
+            <option value="conversation-ad">conversation-ad</option>
+            <option value="message-ad">message-ad</option>
+            <option value="lead-gen-form">lead-gen-form</option>
+            <option value="matched-audience">matched-audience</option>
+            <option value="company-list-abm">company-list-abm</option>
+            <option value="contact-list-targeting">contact-list-targeting</option>
+            <option value="website-retargeting">website-retargeting</option>
+            <option value="landing-page">landing-page</option>
+            <option value="public-company-contact">public-company-contact</option>
+          </select>
+        </label>
+        <label>Approved template / suggested message
+          <input id="liaTemplate" type="text" value="Hi, may I send a short relevant introduction?" />
+        </label>
+        <label>Proof <input id="liaProof" type="text" placeholder="template approval / form id / reply proof" required /></label>
+        <label>Form answers JSON <textarea id="liaFormAnswers" placeholder='{"Email":"lead@example.com","Phone":"+971...","Budget":"300k AED"}'></textarea></label>
+        <label>Seller <input id="liaSeller" type="text" placeholder="seller name" /></label>
+        <label><input id="liaNoReplyPhone" type="checkbox" /> no-reply legally sourced phone handoff</label>
+        <button type="submit" data-action="path">Select legal path</button>
+        <button type="submit" data-action="form">Record Lead Gen Form</button>
+        <button type="submit" data-action="assign">Assign seller</button>
+      </form>
+
+      <h3>Seller Workbench</h3>
+      <form id="linkedinWorkbenchForm">
+        <label>Seller <input id="liWorkbenchSeller" type="text" placeholder="seller name" required /></label>
+        <button type="submit">Open workbench</button>
+      </form>
+      <div id="linkedinWorkbench" class="cards"></div>
+
+      <h3>Technical Tools / Connectors / Legal Gate</h3>
+      <div id="linkedinTools" class="cards"></div>
+
+      <h3>LinkedIn leads and Seller Brief Cards</h3>
+      <div id="linkedinLeads" class="cards"></div>
+    </section>
+
+    <section id="tab-pages-websites" class="tab">
+      <h2 data-i18n="pages.title">Pages &amp; Websites</h2>
+      <p class="hint" data-i18n="pages.subtitle">
+        Target-based website, landing page and conversion builder: every page has a goal, audience, smart form,
+        routing destination, quality score, workflow, analytics, referrals, approvals and public renderer.
+      </p>
+
+      <div class="kpi-grid">
+        <div class="kpi-card"><strong id="pwTemplateCount">0</strong><span data-i18n="pages.templates">Templates</span></div>
+        <div class="kpi-card"><strong id="pwBlockCount">0</strong><span data-i18n="pages.blocks">Blocks</span></div>
+        <div class="kpi-card"><strong id="pwBrandCount">0</strong><span data-i18n="pages.brands">Brand kits</span></div>
+        <div class="kpi-card"><strong id="pwPageCount">0</strong><span data-i18n="pages.pages">Pages</span></div>
+      </div>
+
+      <h3 data-i18n="pages.newWizard">New Page Wizard</h3>
+      <form id="pagesWebsiteForm">
+        <label>Page id <input id="pwId" type="text" placeholder="e.g. salon-dubai" required /></label>
+        <label>Slug <input id="pwSlug" type="text" placeholder="salon-booking-dubai" required /></label>
+        <label>Title <input id="pwTitle" type="text" placeholder="Salon Booking Dubai" required /></label>
+        <label>Start mode <select id="pwStartMode"></select></label>
+        <label>Template <select id="pwTemplate"></select></label>
+        <label>Page goal <select id="pwGoal"></select></label>
+        <label>Audience <select id="pwAudience"></select></label>
+        <label>Page type <select id="pwPageType"></select></label>
+        <label>Brand kit <select id="pwBrandKit"></select></label>
+        <label>Language mode <select id="pwLanguageMode"></select></label>
+        <label>Data destination <select id="pwDestination"></select></label>
+        <label>Target / project / CRM connection <input id="pwConnection" type="text" placeholder="targetId or projectId" /></label>
+        <label>SEO title <input id="pwSeoTitle" type="text" placeholder="SEO title" /></label>
+        <label>Meta description <input id="pwMeta" type="text" placeholder="Meta description" /></label>
+        <button type="submit" data-i18n="pages.create">Create page</button>
+      </form>
+
+      <h3 data-i18n="pages.library">Page Library</h3>
+      <div id="pagesWebsiteList" class="cards"></div>
+
+      <h3 data-i18n="pages.imports">File &amp; Voice Import Interface</h3>
+      <form id="pagesImportForm">
+        <label>Page id <input id="pwiPageId" type="text" placeholder="optional page id" /></label>
+        <label>Import kind
+          <select id="pwiKind">
+            <option value="file">File import</option>
+            <option value="voice">Voice import</option>
+          </select>
+        </label>
+        <label>File name <input id="pwiFileName" type="text" placeholder="lead-notes.pdf or call-recording.mp3" required /></label>
+        <label>Extracted intent <input id="pwiIntent" type="text" placeholder="booking / investor / recruitment" /></label>
+        <button type="submit">Record import</button>
+      </form>
+      <div id="pagesImportsList" class="cards"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
