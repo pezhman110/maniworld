@@ -43,3 +43,4 @@ export * from './modules/prospectOutreach';
 export * from './modules/dutyScope';
 export * from './modules/contentStudio';
 export * from './modules/socialPublisher';
+export * from './modules/globexHorizon';
