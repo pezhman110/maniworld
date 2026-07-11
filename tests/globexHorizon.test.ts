@@ -25,9 +25,9 @@ describe('globexHorizon', () => {
     expect(registry.evaluateSource('fake accounts with anti-detection').status).toBe('blocked');
     expect(registry.evaluateSource('official Meta lead form with consent').status).toBe('allowed');
 
-    const guardedTargets = registry.listTargets().filter((target) => target.complianceStatus === 'guarded');
-    expect(guardedTargets.length).toBeGreaterThan(0);
-    expect(guardedTargets[0].safeAcquisitionPath.join(' ')).toMatch(/official APIs|lead forms/i);
+    const targets = registry.listTargets();
+    expect(targets[0].blockedTactics.join(' ')).toMatch(/fake or purchased social accounts/);
+    expect(targets[0].safeAcquisitionPath.join(' ')).toMatch(/official APIs|lead forms/i);
   });
 
   it('records a daily report and raises KPI alerts when targets are missed', () => {
