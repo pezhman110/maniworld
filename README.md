@@ -140,6 +140,45 @@ No other manual setup is needed — once these environment variables are set
 on the host and the domain is pointed at the running process, the entrance
 page, dashboard, and API are already connected and ready to use.
 
+### Globex Horizon executable sales system
+
+The dashboard now includes a **Globex Horizon** command-center tab backed by
+`/api/globex-horizon`. It packages the 1,000,000 AED/month industrial sales
+model as executable CRM data:
+
+- 6 target groups and 37 detailed targets.
+- Revenue model, team roles, daily workflow, KPI thresholds and 90-day rollout.
+- Daily operations report with automatic KPI alerts.
+- Compliance source gate: scraping, fake/purchased accounts, anti-detection,
+  private monitoring and harvested personal-contact tactics are blocked or
+  replaced with official APIs, lead forms, referrals, public business contacts,
+  consented events and logged human follow-up.
+
+Windows PowerShell run:
+
+```powershell
+npm install
+npm run build
+$env:MW_ADMIN_API_KEY="change-me"
+$env:MW_CREDENTIALS_KEY="<secure-32-byte-key-or-long-secret>"
+npm start
+# open http://localhost:3000/
+```
+
+Create a release ZIP:
+
+```bash
+npm run package:zip
+```
+
+The ZIP includes `dist/`, `public/`, `migrations/`, `package.json`,
+`package-lock.json`, `.env.example`, and this README. Set `RELEASE_ZIP` to write
+the archive somewhere else, for example:
+
+```bash
+RELEASE_ZIP=/tmp/globex-horizon-executable.zip npm run package:zip
+```
+
 ### Running
 
 ```bash

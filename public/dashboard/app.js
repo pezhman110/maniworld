@@ -84,6 +84,7 @@ function applyApiKey(key, status) {
   refreshContentFallbackQueue();
   refreshInstagramAds();
   refreshInstagramAdsFallbackQueue();
+  refreshGlobexHorizon();
   refreshInvestorAcquisition();
   refreshInstagramGrowth();
   refreshLinkedInGrowth();
@@ -1382,6 +1383,169 @@ function setupInvestorAcquisitionForms() {
   }
 }
 
+function globexStatusClass(status) {
+  if (status === 'allowed' || status === 'ready') return 'connected';
+  if (status === 'blocked' || status === 'replaced') return 'invalid';
+  return 'unverified';
+}
+
+async function refreshGlobexHorizon() {
+  await Promise.all([refreshGlobexMissionPack(), refreshGlobexMetrics(), refreshGlobexReports(), refreshGlobexDeployment()]);
+}
+
+async function refreshGlobexMissionPack() {
+  const metricsContainer = document.getElementById('globexMetrics');
+  const revenueContainer = document.getElementById('globexRevenueLines');
+  const groupsContainer = document.getElementById('globexGroups');
+  const workflowContainer = document.getElementById('globexWorkflow');
+  if (!metricsContainer || !revenueContainer || !groupsContainer || !workflowContainer) return;
+  try {
+    const { missionPack } = await apiFetch('/globex-horizon/mission-pack');
+    revenueContainer.innerHTML = missionPack.revenueLines
+      .map(
+        (line) => `<div class="card"><h4>${escapeHtml(line.label)}</h4>
+          <div>${line.percentage}% · ${line.monthlyTargetAed.toLocaleString()} AED/month</div>
+        </div>`
+      )
+      .join('');
+    groupsContainer.innerHTML = missionPack.groups
+      .map(
+        (group) => `<div class="card"><h4>${escapeHtml(group.label)} (${group.targets.length})</h4>
+          <div>${escapeHtml(group.objective)}</div>
+          <div class="hint">${group.targets.map((target) => escapeHtml(target.id)).join(', ')}</div>
+        </div>`
+      )
+      .join('');
+    workflowContainer.innerHTML = missionPack.dailyWorkflow
+      .map(
+        (block) => `<div class="card"><h4>${escapeHtml(block.startsAt)} — ${escapeHtml(block.label)}</h4>
+          <div>${block.actions.map(escapeHtml).join('<br />')}</div>
+        </div>`
+      )
+      .join('');
+  } catch (err) {
+    groupsContainer.innerHTML = `<p class="hint">Failed to load Globex mission pack: ${err.message}</p>`;
+  }
+}
+
+async function refreshGlobexMetrics() {
+  const container = document.getElementById('globexMetrics');
+  if (!container) return;
+  try {
+    const { metrics } = await apiFetch('/globex-horizon/metrics');
+    const items = [
+      ['targetCount', 'Targets'],
+      ['monthlyRevenueTargetAed', 'Monthly AED'],
+      ['dailyRevenueTargetAed', 'Daily AED'],
+      ['reports', 'Reports'],
+      ['latestRevenueAed', 'Latest revenue'],
+      ['latestProgressToDailyRevenueTarget', 'Latest %'],
+      ['latestAlerts', 'Alerts'],
+    ];
+    container.innerHTML =
+      items
+        .map(
+          ([key, label]) =>
+            `<div class="kpi-card"><div class="kpi-value">${metrics[key].toLocaleString()}</div><div class="kpi-label">${label}</div></div>`
+        )
+        .join('') +
+      `<div class="kpi-card"><div class="kpi-value"><span class="status ${globexStatusClass(metrics.readiness)}">${escapeHtml(
+        metrics.readiness
+      )}</span></div><div class="kpi-label">Readiness</div></div>`;
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load Globex metrics: ${err.message}</p>`;
+  }
+}
+
+async function refreshGlobexReports() {
+  const container = document.getElementById('globexReports');
+  if (!container) return;
+  try {
+    const { reports } = await apiFetch('/globex-horizon/daily-reports');
+    container.innerHTML = reports.length
+      ? reports
+          .map(
+            (report) => `<div class="card"><h4>${escapeHtml(report.date)} — ${report.revenueAed.toLocaleString()} AED</h4>
+              <div>Progress: ${report.progressToDailyRevenueTarget}% · bookings ${report.salonBookings} · bridal ${report.bridalContracts}</div>
+              <div class="hint">${report.alerts.length ? report.alerts.map(escapeHtml).join('<br />') : 'All daily KPIs met.'}</div>
+            </div>`
+          )
+          .join('')
+      : '<p class="hint">No Globex daily reports yet.</p>';
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load Globex reports: ${err.message}</p>`;
+  }
+}
+
+async function refreshGlobexDeployment() {
+  const container = document.getElementById('globexDeployment');
+  if (!container) return;
+  try {
+    const { manifest } = await apiFetch('/globex-horizon/deployment-manifest');
+    container.innerHTML = `<div class="card"><h4>${escapeHtml(manifest.packageName)}</h4>
+      <div><strong>Includes:</strong> ${manifest.includes.map(escapeHtml).join(', ')}</div>
+      <div class="hint"><strong>Windows:</strong><br />${manifest.windowsCommands.map(escapeHtml).join('<br />')}</div>
+      <div class="hint"><strong>Notes:</strong><br />${manifest.runtimeNotes.map(escapeHtml).join('<br />')}</div>
+    </div>`;
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load Globex deployment manifest: ${err.message}</p>`;
+  }
+}
+
+function setupGlobexHorizonForms() {
+  const sourceForm = document.getElementById('globexSourceForm');
+  if (sourceForm) {
+    sourceForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const result = document.getElementById('globexSourceResult');
+      try {
+        const { evaluation } = await apiFetch('/globex-horizon/source-evaluation', {
+          method: 'POST',
+          body: JSON.stringify({ source: document.getElementById('gxSource').value }),
+        });
+        result.innerHTML = `<div class="card"><h4>Source gate <span class="status ${globexStatusClass(
+          evaluation.status
+        )}">${escapeHtml(evaluation.status)}</span></h4>
+          <div>${escapeHtml(evaluation.reason)}</div>
+          <div class="hint">${evaluation.allowedPath.map(escapeHtml).join('<br />')}</div>
+        </div>`;
+      } catch (err) {
+        result.innerHTML = `<p class="hint">Failed to evaluate: ${err.message}</p>`;
+      }
+    });
+  }
+
+  const reportForm = document.getElementById('globexReportForm');
+  if (reportForm) {
+    const dateInput = document.getElementById('gxDate');
+    if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+    reportForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        date: document.getElementById('gxDate').value,
+        discoveredLeads: Number(document.getElementById('gxDiscoveredLeads').value),
+        aiQualifiedLeads: Number(document.getElementById('gxAiQualifiedLeads').value),
+        salonBookings: Number(document.getElementById('gxSalonBookings').value),
+        successfulCalls: Number(document.getElementById('gxSuccessfulCalls').value),
+        bridalContracts: Number(document.getElementById('gxBridalContracts').value),
+        freelancerInterviews: Number(document.getElementById('gxFreelancerInterviews').value),
+        investorMeetings: Number(document.getElementById('gxInvestorMeetings').value),
+        revenueAed: Number(document.getElementById('gxRevenueAed').value),
+        averageResponseMinutes: Number(document.getElementById('gxAverageResponseMinutes').value),
+        customerSatisfaction: Number(document.getElementById('gxCustomerSatisfaction').value),
+        notes: document.getElementById('gxNotes').value || undefined,
+      };
+      try {
+        await apiFetch('/globex-horizon/daily-reports', { method: 'POST', body: JSON.stringify(payload) });
+        refreshGlobexMetrics();
+        refreshGlobexReports();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+  }
+}
+
 const INSTAGRAM_GROWTH_KPIS = [
   ['totalFound', 'Accounts found'],
   ['classified', 'Classified'],
@@ -1968,6 +2132,82 @@ async function refreshContentItems(briefId) {
           );
           refreshContentItems(briefId);
           refreshContentFallbackQueue();
+        } catch (err) {
+          alert(err.message);
+        }
+      })
+    );
+  } catch (err) {
+    container.innerHTML = `<p class="hint">Failed to load: ${err.message}</p>`;
+  }
+}
+
+function setupInstagramAdForm() {
+  const form = document.getElementById('instagramAdForm');
+  if (!form) return;
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = {
+      id: document.getElementById('iaId').value || undefined,
+      companyName: document.getElementById('iaCompanyName').value,
+      instagramHandle: document.getElementById('iaHandle').value || undefined,
+      objective: document.getElementById('iaObjective').value,
+      caption: document.getElementById('iaCaption').value,
+      mediaUrl: document.getElementById('iaMediaUrl').value,
+      landingUrl: document.getElementById('iaLandingUrl').value,
+      dailyBudgetMinor: Number(document.getElementById('iaBudget').value),
+      currency: document.getElementById('iaCurrency').value,
+      targetLocations: splitInvestorCsv(document.getElementById('iaLocations').value),
+      targetInterests: splitInvestorCsv(document.getElementById('iaInterests').value),
+      callToAction: document.getElementById('iaCta').value,
+    };
+    try {
+      await apiFetch('/content-studio/instagram-ads', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      form.reset();
+      document.getElementById('iaBudget').value = '5000';
+      document.getElementById('iaCurrency').value = 'AED';
+      refreshInstagramAds();
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
+function renderInstagramAd(ad) {
+  const statusClass = ad.status === 'submitted' ? 'connected' : ad.status === 'manual-fallback' ? 'invalid' : 'unverified';
+  const metaIds = [ad.metaCampaignId, ad.metaAdSetId, ad.metaCreativeId, ad.metaAdId].filter(Boolean).join(' / ');
+  return `<div class="card"><h4>${escapeHtml(ad.companyName)} — ${escapeHtml(ad.id)}</h4>
+    <div>${escapeHtml(ad.instagramHandle || 'instagram')} / ${escapeHtml(ad.objective)} / ${escapeHtml(ad.currency)} ${escapeHtml(
+    ad.dailyBudgetMinor
+  )}</div>
+    <div>${escapeHtml(ad.caption)}</div>
+    <div class="hint">Media: ${escapeHtml(ad.mediaUrl)} | Landing: ${escapeHtml(ad.landingUrl)}</div>
+    <div class="hint">Target: ${escapeHtml(ad.targetLocations.join(', ') || 'default AE')} | Interests: ${escapeHtml(
+    ad.targetInterests.join(', ') || 'none'
+  )}</div>
+    <div>Status: <strong class="status ${statusClass}">${escapeHtml(ad.status)}</strong>${
+    ad.failureReason ? ` — ${escapeHtml(ad.failureReason)}` : ''
+  }</div>
+    ${metaIds ? `<div class="hint">Meta IDs: ${escapeHtml(metaIds)}</div>` : ''}
+    <div><button data-submit-instagram-ad="${escapeHtml(ad.id)}">Submit to Meta as paused ad</button></div>
+  </div>`;
+}
+
+async function refreshInstagramAds() {
+  const container = document.getElementById('instagramAdsList');
+  if (!container) return;
+  try {
+    const { ads } = await apiFetch('/content-studio/instagram-ads');
+    container.innerHTML = ads.length ? ads.map(renderInstagramAd).join('') : '<p class="hint">No Instagram ads yet.</p>';
+    container.querySelectorAll('button[data-submit-instagram-ad]').forEach((btn) =>
+      btn.addEventListener('click', async () => {
+        try {
+          await apiFetch(`/content-studio/instagram-ads/${btn.dataset.submitInstagramAd}/submit`, { method: 'POST' });
+          refreshInstagramAds();
+          refreshInstagramAdsFallbackQueue();
         } catch (err) {
           alert(err.message);
         }
@@ -2565,6 +2805,7 @@ setupTrendForm();
 setupContentBriefForm();
 setupContentPlanForm();
 setupInstagramAdForm();
+setupGlobexHorizonForms();
 setupInvestorAcquisitionForms();
 setupInstagramGrowthForms();
 setupLinkedInGrowthForms();
@@ -2587,6 +2828,7 @@ refreshContentBriefs();
 refreshContentFallbackQueue();
 refreshInstagramAds();
 refreshInstagramAdsFallbackQueue();
+refreshGlobexHorizon();
 refreshInvestorAcquisition();
 refreshInstagramGrowth();
 refreshLinkedInGrowth();

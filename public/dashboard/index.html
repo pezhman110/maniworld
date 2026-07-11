@@ -34,6 +34,7 @@
     <button class="tab-btn" data-tab="compliance-policy">Compliance Policy</button>
     <button class="tab-btn" data-tab="duty-scope">Duty Scope</button>
     <button class="tab-btn" data-tab="content-studio">Content Studio</button>
+    <button class="tab-btn" data-tab="globex-horizon">Globex Horizon</button>
     <button class="tab-btn" data-tab="investor-acquisition">Investor Acquisition</button>
     <button class="tab-btn" data-tab="instagram-growth">Instagram Growth</button>
     <button class="tab-btn" data-tab="linkedin-growth">LinkedIn Growth</button>
@@ -604,6 +605,51 @@
         <button type="submit">Create playbook</button>
       </form>
       <div id="investorPlaybooksList" class="cards"></div>
+    </section>
+
+    <section id="tab-globex-horizon" class="tab">
+      <h2>Globex Horizon — Industrial Sales Command Center</h2>
+      <p class="hint">
+        Executable mission pack for the 1,000,000 AED/month Globex Horizon sales system: 6 groups, 37 targets,
+        revenue model, team workflow, daily KPI tracking, and a compliance gate that replaces scraping/fake-account
+        tactics with official APIs, lead forms, referrals, public business contacts, and logged human follow-up.
+      </p>
+
+      <h3>Revenue & readiness</h3>
+      <div id="globexMetrics" class="kpi-grid"></div>
+      <div id="globexRevenueLines" class="cards"></div>
+
+      <h3>6 groups / 37 targets</h3>
+      <div id="globexGroups" class="cards"></div>
+
+      <h3>Compliance source check</h3>
+      <form id="globexSourceForm">
+        <label>Discovery source or tactic <input id="gxSource" type="text" placeholder="e.g. official Meta lead form / Instagram scraping" required /></label>
+        <button type="submit">Evaluate source</button>
+      </form>
+      <div id="globexSourceResult" class="cards"></div>
+
+      <h3>Daily operations report</h3>
+      <form id="globexReportForm">
+        <label>Date <input id="gxDate" type="date" required /></label>
+        <label>Discovered leads <input id="gxDiscoveredLeads" type="number" min="0" value="700" required /></label>
+        <label>AI-qualified leads <input id="gxAiQualifiedLeads" type="number" min="0" value="300" required /></label>
+        <label>Salon bookings <input id="gxSalonBookings" type="number" min="0" value="120" required /></label>
+        <label>Successful calls <input id="gxSuccessfulCalls" type="number" min="0" value="200" required /></label>
+        <label>Bridal contracts <input id="gxBridalContracts" type="number" min="0" value="5" required /></label>
+        <label>Freelancer interviews <input id="gxFreelancerInterviews" type="number" min="0" value="30" required /></label>
+        <label>Investor meetings <input id="gxInvestorMeetings" type="number" min="0" value="1" required /></label>
+        <label>Revenue AED <input id="gxRevenueAed" type="number" min="0" value="33334" required /></label>
+        <label>Avg response minutes <input id="gxAverageResponseMinutes" type="number" min="0" step="0.1" value="5" required /></label>
+        <label>Customer satisfaction <input id="gxCustomerSatisfaction" type="number" min="0" max="5" step="0.1" value="4.8" required /></label>
+        <label>Notes <textarea id="gxNotes" placeholder="Daily blockers / wins"></textarea></label>
+        <button type="submit">Save report</button>
+      </form>
+      <div id="globexReports" class="cards"></div>
+
+      <h3>Team workflow & ZIP deployment manifest</h3>
+      <div id="globexWorkflow" class="cards"></div>
+      <div id="globexDeployment" class="cards"></div>
     </section>
 
     <section id="tab-instagram-growth" class="tab">

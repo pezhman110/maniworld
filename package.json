@@ -8,7 +8,8 @@
     "test": "jest",
     "lint": "tsc --noEmit -p tsconfig.json",
     "start": "node dist/src/server/index.js",
-    "start:server": "npm start"
+    "start:server": "npm start",
+    "package:zip": "node scripts/create-release-zip.js"
   },
   "license": "MIT",
   "devDependencies": {
