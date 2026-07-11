@@ -32,6 +32,7 @@ import { InvestorAcquisitionRegistry } from '../modules/investorAcquisition';
 import { GlobexHorizonRegistry } from '../modules/globexHorizon';
 import { createConnectionTester, ConnectionTester } from './connectionTest';
 import { requireAdminApiKey } from './auth';
+import { blockUnsafeMethods, jsonBodyErrorHandler, securityHeaders } from './hardening';
 import { TRANSLATIONS } from '../modules/i18n';
 import { createCredentialsRouter } from './routes/credentialsRouter';
 import { createMarketsRouter } from './routes/marketsRouter';
@@ -76,6 +77,8 @@ export interface CreateAppOptions {
   testConnection?: ConnectionTester;
   /** Admin API key required via the `x-api-key` header; omit to disable auth (local/dev only). */
   adminApiKey?: string;
+  /** Maximum JSON request size accepted by the admin API. */
+  jsonBodyLimit?: string;
   /** Serve the static dashboard from `public/dashboard`; disabled in tests by default. */
   serveDashboard?: boolean;
 }
@@ -113,7 +116,11 @@ export function createApp(options: CreateAppOptions = {}): Express {
   const testConnection = options.testConnection ?? createConnectionTester();
 
   const app = express();
-  app.use(express.json());
+  app.disable('x-powered-by');
+  app.use(securityHeaders);
+  app.use(blockUnsafeMethods);
+  app.use(express.json({ limit: options.jsonBodyLimit ?? '256kb' }));
+  app.use(jsonBodyErrorHandler);
 
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 

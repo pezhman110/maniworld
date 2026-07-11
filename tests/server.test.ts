@@ -29,6 +29,38 @@ describe('admin API app', () => {
     expect(res.body.translations.en['dashboard.title']).toBeDefined();
   });
 
+  it('applies hardened response headers and no-store caching to API responses', async () => {
+    const { app } = buildApp('secret-key');
+    const res = await request(app).get('/api/i18n');
+    expect(res.headers['x-powered-by']).toBeUndefined();
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toBe('DENY');
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    expect(res.headers['cache-control']).toBe('no-store');
+  });
+
+  it('blocks unsafe TRACE requests', async () => {
+    const { app } = buildApp();
+    const res = await request(app).trace('/health');
+    expect(res.status).toBe(405);
+    expect(res.body).toEqual({ error: 'HTTP method is not allowed.' });
+  });
+
+  it('returns JSON errors for malformed and oversized request bodies', async () => {
+    const { app } = buildApp();
+    const malformed = await request(app)
+      .post('/api/markets')
+      .set('content-type', 'application/json')
+      .send('{"broken"');
+    expect(malformed.status).toBe(400);
+    expect(malformed.body).toEqual({ error: 'Malformed JSON request body.' });
+
+    const limitedApp = createApp({ jsonBodyLimit: '8b' });
+    const oversized = await request(limitedApp).post('/api/markets').send({ label: 'too large' });
+    expect(oversized.status).toBe(413);
+    expect(oversized.body).toEqual({ error: 'Request body too large.' });
+  });
+
   it('redirects GET / to the entrance page when the dashboard is served', async () => {
     const credentialsStore = new IntegrationCredentialsStore(undefined, testKey);
     const marketRegistry = new MarketRegistry();
